@@ -4,6 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "tsc --declaration",
+    "start": "node lib/bundle",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
@@ -13,13 +15,14 @@
     "@types/chai": "^4.0.4",
     "@types/enhanced-resolve": "^3.0.4",
     "@types/mocha": "^2.2.44",
-    "@types/node": "^8.0.47",
+    "@types/node": "^8.5.2",
     "chai": "^4.1.2",
     "mocha": "^4.0.1",
     "ts-node": "^3.3.0",
     "typescript": "^2.5.3"
   },
   "dependencies": {
+    "@calebboyd/semaphore": "^1.2.0",
     "babel-core": "^6.26.0",
     "babel-plugin-dynamic-import-node": "^1.1.0",
     "babel-plugin-transform-es2015-modules-commonjs": "^6.26.0",

@@ -1,9 +1,14 @@
 {
   "compilerOptions": {
     "target": "es5",
+    "downlevelIteration": true,
     "lib": ["dom", "es2015"],
     "module": "commonjs",
     "noImplicitAny": true,
-    "strict": true
-  }
+    "strict": true,
+    "outDir": "lib"
+  },
+  "include": [
+    "src/**/*"
+  ]
 }

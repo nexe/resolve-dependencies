@@ -1,5 +1,5 @@
 node_modules
 *.log
 .idea
+lib
 .DS_Store
-test-entry.js

@@ -2,6 +2,10 @@
 # yarn lockfile v1
 
 
+"@calebboyd/semaphore@^1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@calebboyd/semaphore/-/semaphore-1.2.0.tgz#4fdb3714c9127138e5ed4a3425879dac60de7ecc"
+
 "@types/babel-core@^6.25.3":
   version "6.25.3"
   resolved "https://registry.yarnpkg.com/@types/babel-core/-/babel-core-6.25.3.tgz#c7fda09007375ae89942307917ed21ed309a1c2a"
