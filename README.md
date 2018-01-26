@@ -7,8 +7,12 @@ Converts modules to commonjs.
 File processing (babel) occurs concurrently in (CPUs - 1) child processes.
 
 ```javascript
-const { entries, files } = await resolve('./entry-file.js')
-console.log(entries['./entry-file.js'])
+import { resolve } from 'resolve-dependencies'
+
+;(async () => {
+  const { entries, files } = await resolve('./entry-file.js')
+  console.log(entries['./entry-file.js'])
+})()
 // {
 //   absPath: "/path/to/entry-file.js",
 //   contents: "console.log('hello world')",

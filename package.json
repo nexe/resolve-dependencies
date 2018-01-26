@@ -1,12 +1,16 @@
 {
   "name": "resolve-dependencies",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Resolve an entrypoint's dependencies",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
     "lib"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/nexe/resolve-dependencies.git"
+  },
   "scripts": {
     "build": "tsc --declaration",
     "prepublishOnly": "npm run build",
