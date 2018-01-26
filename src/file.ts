@@ -1,34 +1,26 @@
 export type JSONPrimitive = string | number | boolean | null
 export interface JSONArray extends Array<AnyJSON> {}
-export interface JSONObject { [key: string]: AnyJSON }
+export interface JSONObject {
+  [key: string]: AnyJSON
+}
+export type FileMap = { [key: string]: File | null }
 export type AnyJSON = JSONPrimitive | JSONArray | JSONObject
 export interface File {
-  dependencies: { [key: string]: File }
-  absPath?: string
-  requests: { [key: string]: string }
+  deps: FileMap
+  absPath: string
   contents: string
-  variableImports: boolean
+  variableImports?: boolean
+  moduleRoot?: string
   package?: JSONObject
 }
 
 const variableImports = false
 
-export function createFile (absPath?: string): File {
+export function createFile(absPath: string): File {
   return {
-    dependencies: {},
+    deps: {},
     absPath,
-    requests: {},
     contents: '',
     variableImports
   }
-}
-
-export function mergeFile (a: File, b: File): File {
-  Object.assign(a.dependencies, b.dependencies)
-  Object.assign(a.requests, b.requests)
-  if (!a.contents && b.contents) {
-    a.contents = b.contents
-  }
-  a.absPath = b.absPath = a.absPath || b.absPath  
-  return a
 }

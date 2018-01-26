@@ -1,53 +1,77 @@
 import { Semaphore } from '@calebboyd/semaphore'
-import { createFile, mergeFile, File } from './file'
-import { Worker } from './worker'
+import { createFile, File, FileMap } from './file'
+import { Worker, WorkerThread, StandardWorker } from './worker'
+import { dirname } from 'path'
+import builtins from './node-builtins'
 
 const cpus = require('os').cpus().length
-
 export { cpus }
 
-export class LoaderPool<T = any> {  
-  private pool = [...Array(this.size)].map(x => new Worker('./loader'))
-  private visted: { [key: string]: true } = {}
+export class LoaderPool<T = any> {
+  private pool: Worker[] = []
+  private inuse: Worker[] = []
   private lock = new Semaphore(this.size)
-  constructor (private size: number = cpus - 1, options: any) {}
+  private depReqs: Promise<File>[] = []
 
-  kill () {
+  constructor(private size: number = cpus - 1, worker: any, options: any) {
+    this.pool = [...Array(this.size)].map(x => new worker('./node-loader'))
+  }
+
+  private kill() {
     this.pool.forEach(x => x.kill())
+    this.inuse.forEach(x => x.kill())
   }
 
-  async load (filename: string, files: Map<string, File> ) {
-    let file = createFile()
-    if (!files.has(filename)) {
-      files.set(filename, file)
-    }
-    mergeFile(file, await this._load(filename))
-    return file
-  }
-
-  resolve (from: string, request: string) {
-    return this.lock.acquire().then(async () => {
-      const worker = this.pool.shift()!
-      const result = await worker.execute('loader', 'resolve', [from, request])
+  private aqcuire() {
+    const worker = this.pool.shift()!
+    const i = this.inuse.push(worker) - 1
+    const release = () => {
       this.pool.push(worker)
+      this.inuse.splice(i, 1)
       this.lock.release()
-      return result
+    }
+    return { worker, release }
+  }
+
+  load(wd: string, request: string, files: FileMap) {
+    return this._load(wd, request, files).then(async x => {
+      this.kill()
+      return x
     })
   }
 
-  private _load (filename: string): Promise<File> {
-    return this.lock.acquire().then(async () => {      
-      if (filename in this.visted) {
-        this.lock.release()
-        return null
-      }      
-      let worker = this.pool.shift()!
+  private _load(wd: string, request: string, files: FileMap): Promise<File> {
+    return this.lock.acquire().then(async () => {
+      const { worker, release } = this.aqcuire()
+      let file: File
+      let error: Error | null = null
 
-      this.visted[filename] = true      
-      const file = await worker.execute('loader', 'load', [filename])
-      this.pool.push(worker)
-      this.lock.release()
-      return file
+      try {
+        file = await worker.execute<File>('node-loader', 'load', [wd, request])
+      } catch (e) {
+        error = e
+      } finally {
+        release()
+        if (error) throw error
+        file = file!
+      }
+
+      if (files[file.absPath]) {
+        return files[file.absPath]!
+      } else {
+        files[file.absPath] = file
+      }
+
+      const fileDir = dirname(file.absPath)
+
+      return Promise.all(
+        Object.keys(file.deps).map(req => {
+          if (~builtins.indexOf(req)) {
+            return (file.deps[req] = null as any)
+          }
+          return this._load(fileDir, req, files).then(dep => (file.deps[req] = dep))
+        })
+      ).then(() => file)
     })
   }
 }

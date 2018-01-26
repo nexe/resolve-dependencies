@@ -1,59 +1,47 @@
-import * as path from 'path'
-import * as resolve from 'enhanced-resolve'
-import builtins from './node-builtins'
-import { JsLoader } from './js-loader';
-import { File, JSONObject } from './file'
-import { isModuleDeclaration } from 'babel-types';
+import { LoaderPool, cpus } from './loader-pool'
+import { WorkerThread, StandardWorker } from './worker'
+import { File, FileMap } from './file'
 
-function resolveDependency (rootFile: string, request: string) {
-  //return path.resolve(path.dirname(rootFile), request)
-  return resolve.sync(path.dirname(rootFile), request)
-}
+export { resolve }
+export default async function resolve(options: any) {
+  const { cwd, entries } = normalizeOptions(options)
+  const loader = new LoaderPool<File>(cpus - 1, WorkerThread, {
+      unsafeCache: true,
+      extensions: ['.js', '.mjs', '.json', '.node']
+    }),
+    files: FileMap = {},
+    res = await Promise.all(entries.map(request => loader.load(cwd, request, files)))
 
-function loadFile (
-  files: Map<string, File>, 
-  absPath: string, 
-  loader = JsLoader, 
-  context: ResolveContext = contexts.node, 
-  packageJson?: JSONObject
-) {
-  const file = loader.create(absPath).load()
-  if (!files.size) {
-    files.set(absPath, file)
-  }
-  for(const [request] of file.dependencies) {
-    if (context[request]) {
-      continue
-    }
-    const resolvedDep = resolveDependency(absPath, request)
-    let depFile = files.get(resolvedDep)
-    let isModuleEntry = false
-    if (!request.startsWith('.')) {
-      //node module found...
-      const packagePath = request.split('/')[0] + '/package.json'
-      packageJson = require(resolveDependency(absPath, packagePath)) //todo FS?
-      isModuleEntry = true
-    }
-    if (!depFile) {
-      files.set(resolvedDep, depFile = loader.create(absPath))
-      const tmp = loadFile(files, resolvedDep, loader, context, packageJson)
-      depFile.copy(tmp)
-    }
-    depFile.isModuleEntry = isModuleEntry
-    depFile.package = packageJson
-    depFile.requests.add(request)
-    file.dependencies.set(request, depFile)    
-  }
-  return file
-}
-
-type ResolveContext = { [key: string]: true | File }
-const contexts: { [key: string]: ResolveContext } = {
-  browser: {
-    //maybe, probably not
-  },
-  node: builtins.reduce((ctx: { [key: string]: boolean }, builtin) => {
-    ctx[builtin] = true
-    return ctx
+  const entryMap = entries.reduce((entryMap: FileMap, entry, i) => {
+    entryMap[entry] = res[i]
+    return entryMap
   }, {})
+
+  return { files, entries: entryMap }
+}
+
+function normalizeOptions(options: any) {
+  const entries: string[] = []
+  let cwd = process.cwd()
+
+  if (typeof options === 'string') {
+    entries.push(options)
+  }
+  if (typeof options === 'object') {
+    if (options.entries && options.entries.length) {
+      entries.push(...options.entries)
+    }
+    if (options.cwd) {
+      cwd = options.cwd
+    }
+  }
+
+  if (!entries.length) {
+    try {
+      entries.push(require.resolve(process.cwd()))
+    } catch (e) {
+      throw new Error('No entry file found')
+    }
+  }
+  return { cwd, entries }
 }

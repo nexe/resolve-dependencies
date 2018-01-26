@@ -1,14 +1,27 @@
 import { fork } from 'child_process'
 import { AnyJSON } from './file'
+import * as loader from './node-loader'
 
-export class Worker {
+export interface Worker {
+  execute<T>(context: string, method: string, args?: AnyJSON): Promise<T>
+  kill(): void
+}
+
+export class StandardWorker implements Worker {
+  constructor(private bs: string) {}
+  execute<T>(context: string, method: string, args?: AnyJSON) {
+    return Promise.resolve(loader.load.apply(null, args))
+  }
+  kill() {}
+}
+export class WorkerThread implements Worker {
   private child = fork(require.resolve('./worker-runtime'))
   private ready = false
-  private starting = new Promise<boolean>((resolve) =>
-      this.child.once('message', x => resolve(x === 'ready'))
-    ).then(x => this.ready = x)
+  private starting = new Promise<boolean>(resolve =>
+    this.child.once('message', x => resolve(x === 'ready'))
+  ).then(x => (this.ready = x))
 
-  constructor (module: string) {
+  constructor(module: string) {
     this.child.send({ module })
   }
 
@@ -20,10 +33,10 @@ export class Worker {
     return this.starting.then(() => exec())
   }
 
-  execute (context: string, method: string, args?: AnyJSON) {
+  execute<T>(context: string, method: string, args?: AnyJSON): Promise<T> {
     const exec = () => {
       const response = new Promise((resolve, reject) => {
-        this.child.once('message', (payload) => {
+        this.child.once('message', payload => {
           if (payload.error) {
             return reject(payload.error)
           }
@@ -36,7 +49,7 @@ export class Worker {
     return this.onceReady(exec)
   }
 
-  kill () {
+  kill() {
     this.child.kill()
   }
 }
