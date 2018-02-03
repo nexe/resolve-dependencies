@@ -1,6 +1,7 @@
 import { LoaderPool, cpus } from './loader-pool'
 import { WorkerThread, StandardWorker } from './worker'
 import { File, FileMap } from './file'
+import { relative } from 'path'
 
 export { resolve }
 export default async function resolve(options: any) {
@@ -10,7 +11,9 @@ export default async function resolve(options: any) {
       extensions: ['.js', '.mjs', '.json', '.node']
     }),
     files: FileMap = {},
-    res = await Promise.all(entries.map(request => loader.load(cwd, request, files)))
+    res = await Promise.all(
+      entries.map(x => './' + relative(cwd, x)).map(request => loader.load(cwd, request, files))
+    )
 
   const entryMap = entries.reduce((entryMap: FileMap, entry, i) => {
     entryMap[entry] = res[i]
