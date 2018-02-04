@@ -1,5 +1,5 @@
 import { readFileSync } from 'fs'
-import { join } from 'path'
+import { join, sep, normalize } from 'path'
 import * as babel from 'babel-core'
 import { File, createFile } from './file'
 import * as Resolve from 'enhanced-resolve'
@@ -7,8 +7,22 @@ import * as Resolve from 'enhanced-resolve'
 //SOMEDAY use maintained regex https://github.com/systemjs/systemjs/issues/1733
 const esmRegEx = /(^\s*|[}\);\n]\s*)(import\s*(['"]|(\*\s+as\s+)?(?!type)([^"'\(\)\n; ]+)\s*from\s*['"]|\{)|export\s+\*\s+from\s+["']|export\s*(\{|default|function|class|var|const|let|async\s+function))/
 const notNodeModule = /^\.|^\//
+const trailingSep = /[\\/]+$/
+
 function isNodeModule(name: string) {
   return !notNodeModule.test(name)
+}
+
+function getModuleRoot(entryFile: string, request: string) {
+  console.log({ entryFile, request })
+  request = normalize(request)
+  const reqSplits = request.split(sep)
+  const moduleRoot = [reqSplits[0]]
+  if (request.startsWith('@')) {
+    moduleRoot.push(reqSplits[1])
+  }
+  const root = join(entryFile.split(request)[0], ...moduleRoot)
+  return root.replace(trailingSep, '')
 }
 
 function captureDeps(nodePath: any, file: File) {
@@ -42,13 +56,14 @@ export function load(wd: string, request: string) {
   const fileContents = readFileSync(absPath, 'utf-8')
 
   if (absPath.endsWith('.json')) {
-    file.contents = 'module.exports = ' + fileContents
+    file.contents = fileContents
     return file
   }
 
   if (isNodeModule(request)) {
     //Assumptions: module folder is module name, and package.json exists
-    file.moduleRoot = absPath.replace(new RegExp(request + '.*'), request)
+    file.moduleRoot = getModuleRoot(file.absPath, request)
+    console.log(file.moduleRoot)
     file.package = JSON.parse(readFileSync(join(file.moduleRoot, 'package.json'), 'utf-8'))
   }
   const result = babel.transform(fileContents, {
