@@ -14,7 +14,6 @@ function isNodeModule(name: string) {
 }
 
 function getModuleRoot(entryFile: string, request: string) {
-  console.log({ entryFile, request })
   request = normalize(request)
   const reqSplits = request.split(sep)
   const moduleRoot = [reqSplits[0]]
@@ -63,7 +62,6 @@ export function load(wd: string, request: string) {
   if (isNodeModule(request)) {
     //Assumptions: module folder is module name, and package.json exists
     file.moduleRoot = getModuleRoot(file.absPath, request)
-    console.log(file.moduleRoot)
     file.package = JSON.parse(readFileSync(join(file.moduleRoot, 'package.json'), 'utf-8'))
   }
   const result = babel.transform(fileContents, {

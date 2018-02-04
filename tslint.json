@@ -4,6 +4,7 @@
     "exclude": ["**/node_modules/**/*"]
   },  
   "rules": {
-    "prettier": [true, { "semi": false, "printWidth": 100, "singleQuote": true }]
+    "prettier": [true, { "semi": false, "printWidth": 100, "singleQuote": true }],
+    "no-console": true
   }
 }
