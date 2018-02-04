@@ -2,8 +2,8 @@ import { LoaderPool, cpus } from './loader-pool'
 import { WorkerThread, StandardWorker } from './worker'
 import { File, FileMap } from './file'
 import { relative } from 'path'
-const version = '11111'
-export { resolve, version }
+
+export { resolve }
 export default async function resolve(options: any) {
   const { cwd, entries } = normalizeOptions(options)
   const loader = new LoaderPool<File>(cpus - 1, WorkerThread, {

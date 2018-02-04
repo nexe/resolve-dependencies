@@ -18,7 +18,7 @@ function tryGetPackage(file: File) {
     return JSON.parse(readFileSync(join(file.moduleRoot!, 'package.json'), 'utf-8'))
   } catch (e) {
     process.stderr.write(
-      `[ERROR]: Can't read package json for package with entry file: ${file.absPath}\n`
+      `[ERROR]: Can't find package.json for package with entry file: ${file.absPath}\n`
     )
     return {}
   }
@@ -75,34 +75,50 @@ export function load(wd: string, request: string) {
   }
 
   const fileContents = readFileSync(absPath, 'utf-8')
+  file.contents = fileContents
 
   if (absPath.endsWith('.json')) {
-    file.contents = fileContents
     return file
   }
+
+  const sourceType = fileContents.match(esmRegEx) ? 'module' : 'script'
+  let code = true
+  let plugins = [
+    'babel-plugin-transform-es2015-modules-commonjs',
+    'babel-plugin-dynamic-import-node',
+    {
+      visitor: {
+        CallExpression: {
+          enter: (nodePath: any) => {
+            captureDeps(nodePath, file)
+          }
+        }
+      }
+    }
+  ]
 
   if (isNodeModule(request)) {
     //Assumptions: module folder is module name, and package.json exists
     file.moduleRoot = getModuleRoot(file.absPath, request)
     file.package = tryGetPackage(file)
   }
+
+  if (~file.absPath.indexOf('node_modules') && sourceType === 'script') {
+    //avoid extra work...
+    plugins = plugins.slice(2)
+    code = false
+  }
+
   const result = babel.transform(fileContents, {
-    sourceType: fileContents.match(esmRegEx) ? 'module' : 'script',
+    sourceType,
+    code,
     compact: true,
-    plugins: [
-      'babel-plugin-transform-es2015-modules-commonjs',
-      'babel-plugin-dynamic-import-node',
-      {
-        visitor: {
-          CallExpression: {
-            enter: (nodePath: any) => {
-              captureDeps(nodePath, file)
-            }
-          }
-        }
-      }
-    ]
+    plugins
   })
-  file.contents = result.code!
+
+  if (code) {
+    file.contents = result.code!
+  }
+
   return file
 }
