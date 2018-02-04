@@ -1,15 +1,14 @@
 import { fork } from 'child_process'
-import { AnyJSON } from './file'
 import * as loader from './node-loader'
 
 export interface Worker {
-  execute<T>(context: string, method: string, args?: AnyJSON): Promise<T>
+  execute<T>(context: string, method: string, args?: any): Promise<T>
   kill(): void
 }
 
 export class StandardWorker implements Worker {
   constructor(private bs: string) {}
-  execute<T>(context: string, method: string, args?: AnyJSON) {
+  execute<T>(context: string, method: string, args?: any) {
     return Promise.resolve(loader.load.apply(null, args))
   }
   kill() {}
@@ -33,7 +32,7 @@ export class WorkerThread implements Worker {
     return this.starting.then(() => exec())
   }
 
-  execute<T>(context: string, method: string, args?: AnyJSON): Promise<T> {
+  execute<T>(context: string, method: string, args?: any): Promise<T> {
     const exec = () => {
       const response = new Promise((resolve, reject) => {
         this.child.once('message', payload => {

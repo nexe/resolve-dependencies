@@ -1,17 +1,12 @@
-export type JSONPrimitive = string | number | boolean | null
-export interface JSONArray extends Array<AnyJSON> {}
-export interface JSONObject {
-  [key: string]: AnyJSON
-}
 export type FileMap = { [key: string]: File | null }
-export type AnyJSON = JSONPrimitive | JSONArray | JSONObject
 export interface File {
   deps: FileMap
+  belongsTo?: File
   absPath: string
   contents: string
   variableImports?: boolean
   moduleRoot?: string
-  package?: JSONObject
+  package?: any
 }
 
 const variableImports = false

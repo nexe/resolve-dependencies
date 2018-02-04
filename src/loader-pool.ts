@@ -73,7 +73,13 @@ export class LoaderPool<T = any> {
           if (~builtins.indexOf(req)) {
             return (file.deps[req] = null as any)
           }
-          return this._load(fileDir, req, files).then(dep => (file.deps[req] = dep))
+          return this._load(fileDir, req, files).then(dep => {
+            file.deps[req] = dep
+            if ((file.moduleRoot || file.belongsTo) && dep && !dep.moduleRoot) {
+              const owner = file.moduleRoot ? file : file.belongsTo
+              dep.belongsTo = owner
+            }
+          })
         })
       ).then(() => file)
     })
