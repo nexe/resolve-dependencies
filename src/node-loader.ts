@@ -13,6 +13,17 @@ function isNodeModule(name: string) {
   return !notNodeModule.test(name)
 }
 
+function tryGetPackage(file: File) {
+  try {
+    return JSON.parse(readFileSync(join(file.moduleRoot!, 'package.json'), 'utf-8'))
+  } catch (e) {
+    process.stderr.write(
+      `[ERROR]: Can't read package json for package with entry file: ${file.absPath}\n`
+    )
+    return {}
+  }
+}
+
 function getModuleRoot(entryFile: string, request: string) {
   request = normalize(request)
   const reqSplits = request.split(sep)
@@ -20,7 +31,11 @@ function getModuleRoot(entryFile: string, request: string) {
   if (request.startsWith('@')) {
     moduleRoot.push(reqSplits[1])
   }
-  const root = join(entryFile.split(request)[0], ...moduleRoot)
+  const root = join(
+    entryFile.split(join('node_modules', request))[0],
+    'node_modules',
+    ...moduleRoot
+  )
   return root.replace(trailingSep, '')
 }
 
@@ -40,11 +55,18 @@ function captureDeps(nodePath: any, file: File) {
 }
 
 export function resolve(from: string, request: string) {
-  return Resolve.sync(from, request)
+  try {
+    return Resolve.sync(from, request)
+  } catch (e) {
+    process.stderr.write('[WARN]: ' + e.message + '\n')
+  }
 }
 
 export function load(wd: string, request: string) {
   const absPath = resolve(wd, request)
+  if (!absPath) {
+    return null
+  }
   const file = createFile(request)
   file.absPath = absPath
 
@@ -62,10 +84,11 @@ export function load(wd: string, request: string) {
   if (isNodeModule(request)) {
     //Assumptions: module folder is module name, and package.json exists
     file.moduleRoot = getModuleRoot(file.absPath, request)
-    file.package = JSON.parse(readFileSync(join(file.moduleRoot, 'package.json'), 'utf-8'))
+    file.package = tryGetPackage(file)
   }
   const result = babel.transform(fileContents, {
     sourceType: fileContents.match(esmRegEx) ? 'module' : 'script',
+    compact: true,
     plugins: [
       'babel-plugin-transform-es2015-modules-commonjs',
       'babel-plugin-dynamic-import-node',

@@ -40,7 +40,7 @@ export class LoaderPool<T = any> {
     })
   }
 
-  private _load(wd: string, request: string, files: FileMap): Promise<File> {
+  private _load(wd: string, request: string, files: FileMap): Promise<File | null> {
     return this.lock.acquire().then(async () => {
       const { worker, release } = this.aqcuire()
       let file: File
@@ -54,6 +54,10 @@ export class LoaderPool<T = any> {
         release()
         if (error) throw error
         file = file!
+      }
+
+      if (!file) {
+        return null
       }
 
       if (files[file.absPath]) {
