@@ -103,7 +103,7 @@ export function load(wd: string, request: string) {
     file.package = tryGetPackage(file)
   }
 
-  if (~file.absPath.indexOf('node_modules') && sourceType === 'script') {
+  if (sourceType === 'script') {
     //avoid extra work...
     plugins = plugins.slice(2)
     code = false
