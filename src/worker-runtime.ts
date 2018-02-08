@@ -11,7 +11,13 @@ if (process.send) {
 
     if (message.module) {
       contexts[contextName] = require(message.module)
-      process.send!({ result: 'ready' })
+      let starting = Promise.resolve()
+      if (contexts[contextName].initialize) {
+        starting = Promise.resolve(contexts[contextName].initialize(message.options))
+      }
+      starting.then(() => {
+        process.send!({ result: 'ready' })
+      })
       return
     }
 

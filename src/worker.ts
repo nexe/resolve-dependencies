@@ -20,8 +20,8 @@ export class WorkerThread implements Worker {
     this.child.once('message', x => resolve(x === 'ready'))
   ).then(x => (this.ready = x))
 
-  constructor(module: string) {
-    this.child.send({ module })
+  constructor(module: string, options: any) {
+    this.child.send({ module, options })
   }
 
   private onceReady(exec: () => Promise<any>) {

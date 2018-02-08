@@ -4,47 +4,49 @@ import { File, FileMap } from './file'
 import { relative } from 'path'
 
 export { resolve }
-export default async function resolve(options: any) {
-  const { cwd, entries } = normalizeOptions(options)
-  const loader = new LoaderPool<File>(cpus - 1, WorkerThread, {
-      unsafeCache: true,
-      extensions: ['.js', '.mjs', '.json', '.node']
-    }),
-    files: FileMap = {},
+export type ResolveOptions = { entries: string[]; cwd: string; strict: boolean } | string
+
+export default async function resolve(...options: Partial<ResolveOptions>[]) {
+  const opts = parseOptions(options)
+  const loader = new LoaderPool<File>(cpus - 1, WorkerThread, opts),
     res = await Promise.all(
-      entries.map(x => './' + relative(cwd, x)).map(request => loader.load(cwd, request, files))
+      opts.entries
+        .map(x => './' + relative(opts.cwd, x))
+        .map(request => loader.load(opts.cwd, request))
     )
 
-  const entryMap = entries.reduce((entryMap: FileMap, entry, i) => {
+  const entryMap = opts.entries.reduce((entryMap: FileMap, entry, i) => {
     entryMap[entry] = res[i]
     return entryMap
   }, {})
 
-  return { files, entries: entryMap }
+  return { files: loader.files, entries: entryMap }
 }
 
-function normalizeOptions(options: any) {
-  const entries: string[] = []
-  let cwd = process.cwd()
-
-  if (typeof options === 'string') {
-    entries.push(options)
-  }
-  if (typeof options === 'object') {
-    if (options.entries && options.entries.length) {
-      entries.push(...options.entries)
-    }
-    if (options.cwd) {
-      cwd = options.cwd
-    }
+function parseOptions(args: Partial<ResolveOptions>[]) {
+  const options = {
+    entries: [] as string[],
+    cwd: process.cwd(),
+    strict: true
   }
 
-  if (!entries.length) {
+  args.forEach(x => {
+    if (typeof x === 'string') return options.entries.push(x)
+    if (x.cwd) options.cwd = x.cwd
+    if (x.entries && x.entries.length) options.entries.push(...x.entries)
+    if ('strict' in x) options.strict = Boolean(x.strict)
+  })
+
+  const entries = new Set(options.entries)
+  options.entries.length = 0
+  options.entries.push(...Array.from(entries))
+
+  if (!options.entries.length) {
     try {
-      entries.push(require.resolve(process.cwd()))
+      options.entries.push(require.resolve(options.cwd))
     } catch (e) {
       throw new Error('No entry file found')
     }
   }
-  return { cwd, entries }
+  return options
 }

@@ -1,3 +1,5 @@
+import { relative } from 'path'
+
 export type FileMap = { [key: string]: File | null }
 export interface File {
   deps: FileMap
@@ -10,6 +12,19 @@ export interface File {
 }
 
 const variableImports = false
+const notNodeModule = /^\.|^\//
+
+export function isNodeModule(request: string) {
+  return !notNodeModule.test(request)
+}
+
+export function ensureDottedRelative(from: string, to: string) {
+  const rel = relative(from, to)
+  if (!rel.startsWith('.')) {
+    return './' + rel
+  }
+  return rel
+}
 
 export function createFile(absPath: string): File {
   return {

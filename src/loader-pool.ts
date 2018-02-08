@@ -1,5 +1,5 @@
 import { Semaphore } from '@calebboyd/semaphore'
-import { createFile, File, FileMap } from './file'
+import { createFile, File, FileMap, isNodeModule } from './file'
 import { Worker, WorkerThread, StandardWorker } from './worker'
 import { dirname } from 'path'
 import builtins from './node-builtins'
@@ -11,10 +11,10 @@ export class LoaderPool<T = any> {
   private pool: Worker[] = []
   private inuse: Worker[] = []
   private lock = new Semaphore(this.size)
-  private depReqs: Promise<File>[] = []
+  public files: FileMap = {}
 
-  constructor(private size: number = cpus - 1, worker: any, options: any) {
-    this.pool = [...Array(this.size)].map(x => new worker('./node-loader'))
+  constructor(private size: number = cpus - 1, worker: any, private options: any = {}) {
+    this.pool = [...Array(this.size)].map(x => new worker('./node-loader', options))
   }
 
   private kill() {
@@ -33,21 +33,21 @@ export class LoaderPool<T = any> {
     return { worker, release }
   }
 
-  load(wd: string, request: string, files: FileMap) {
-    return this._load(wd, request, files).then(async x => {
+  load(wd: string, request: string) {
+    return this._load(wd, request).then(async x => {
       this.kill()
       return x
     })
   }
 
-  private _load(wd: string, request: string, files: FileMap): Promise<File | null> {
+  private _load(wd: string, request: string, parse = true): Promise<File | null> {
     return this.lock.acquire().then(async () => {
       const { worker, release } = this.aqcuire()
       let file: File
       let error: Error | null = null
 
       try {
-        file = await worker.execute<File>('node-loader', 'load', [wd, request])
+        file = await worker.execute<File>('node-loader', 'load', [wd, request, { parse }])
       } catch (e) {
         error = e
       } finally {
@@ -60,10 +60,10 @@ export class LoaderPool<T = any> {
         return null
       }
 
-      if (files[file.absPath]) {
-        return files[file.absPath]!
+      if (this.files[file.absPath]) {
+        return this.files[file.absPath]!
       } else {
-        files[file.absPath] = file
+        this.files[file.absPath] = file
       }
 
       const fileDir = dirname(file.absPath)
@@ -73,7 +73,11 @@ export class LoaderPool<T = any> {
           if (~builtins.indexOf(req)) {
             return (file.deps[req] = null as any)
           }
-          return this._load(fileDir, req, files).then(dep => {
+          let parseDep = true
+          if (!this.options.strict && file.moduleRoot && !isNodeModule(req)) {
+            parseDep = false
+          }
+          return this._load(fileDir, req, parseDep).then(dep => {
             file.deps[req] = dep
             if ((file.moduleRoot || file.belongsTo) && dep && !dep.moduleRoot) {
               const owner = file.moduleRoot ? file : file.belongsTo
