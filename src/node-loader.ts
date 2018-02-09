@@ -46,26 +46,27 @@ function captureDeps(nodePath: any, file: File) {
   if (callee.isIdentifier() && callee.equals('name', 'require')) {
     const arg = nodePath.get('arguments')[0]
     if (arg && arg.isStringLiteral()) {
-      return (file.deps[arg.node.value] = file.deps[arg.node.value] || createFile(''))
+      return (file.deps[arg.node.value] = null)
     }
     if (arg && arg.isTemplateLiteral() && arg.node.quasis.length === 1) {
       const dep = arg.gnode.quasis[0].value.cooked
-      return (file.deps[dep] = file.deps[dep] || createFile(''))
+      return (file.deps[dep] = null)
     }
     file.variableImports = true
   }
 }
 
 function resolveModuleFiles(file: File) {
-  const globs = file.package.files || '**/*'
+  const globs = file.package.files || '**/*',
+    cwd = file.moduleRoot!,
+    main = dirname(file.absPath)
+
   globby
-    .sync(globs, {
-      cwd: file.moduleRoot
-    })
-    .map(x => './' + x)
+    .sync(globs, { cwd })
+    .map(x => ensureDottedRelative(main, join(cwd, x)))
     .concat(Object.keys(file.package.dependencies || {}))
     .reduce((deps, dep) => {
-      deps[dep] = createFile('')
+      deps[dep] = null
       return deps
     }, file.deps)
 
@@ -105,9 +106,10 @@ export function load(wd: string, request: string, options: any) {
     const packageInfo = tryGetPackage(file, pkgPath)
     if (packageInfo) {
       file.package = packageInfo
-      file.deps[ensureDottedRelative(dirname(file.absPath), pkgPath)] = createFile('')
+      file.deps[ensureDottedRelative(dirname(file.absPath), pkgPath)] = null
     } else {
       process.stderr.write(
+        //TODO don't log like this...(multiple threads, racing)
         `[WARN]: package.json not found for: "${request}" in ${file.moduleRoot}\n`
       )
     }
