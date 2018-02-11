@@ -1,6 +1,6 @@
-import { readFileSync } from 'fs'
+import { readFileSync, statSync } from 'fs'
 import globby = require('globby')
-import { join, sep, normalize, dirname } from 'path'
+import { join, sep, normalize, dirname, extname } from 'path'
 import * as babel from 'babel-core'
 import { File, createFile, isNodeModule, ensureDottedRelative } from './file'
 import * as Resolve from 'enhanced-resolve'
@@ -34,7 +34,7 @@ function getModuleRoot(entryFile: string, request: string) {
     moduleRoot.push(reqSplits[1])
   }
   const root = join(
-    entryFile.split(join('node_modules', request))[0],
+    entryFile.split(join('node_modules', ...moduleRoot))[0],
     'node_modules',
     ...moduleRoot
   )
@@ -57,9 +57,19 @@ function captureDeps(nodePath: any, file: File) {
 }
 
 function resolveModuleFiles(file: File) {
-  const globs = file.package.files || '**/*',
-    cwd = file.moduleRoot!,
+  const cwd = file.moduleRoot!,
     main = dirname(file.absPath)
+  let globs = '**/*'
+
+  if (file.package.files && file.package.files.length) {
+    globs = file.package.files.map((x: string) => {
+      const stat = statSync(join(cwd, x))
+      if (stat.isDirectory()) {
+        return x + '/**/*'
+      }
+      return x
+    })
+  }
 
   globby
     .sync(globs, { cwd })
