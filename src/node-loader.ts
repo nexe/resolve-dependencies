@@ -14,6 +14,7 @@ export function initialize(config: any = {}) {
 //SOMEDAY use maintained regex https://github.com/systemjs/systemjs/issues/1733
 const esmRegEx = /(^\s*|[}\);\n]\s*)(import\s*(['"]|(\*\s+as\s+)?(?!type)([^"'\(\)\n; ]+)\s*from\s*['"]|\{)|export\s+\*\s+from\s+["']|export\s*(\{|default|function|class|var|const|let|async\s+function))/
 const trailingSep = /[\\/]+$/
+const trailingSlashes = /\/+$/
 
 function tryGetPackage(file: File, packagePath: string) {
   try {
@@ -61,18 +62,21 @@ function resolveModuleFiles(file: File) {
     main = dirname(file.absPath)
   let globs = '**/*'
 
-  if (file.package.files && file.package.files.length) {
-    globs = file.package.files.map((x: string) => {
-      const stat = statSync(join(cwd, x))
-      if (stat.isDirectory()) {
-        return x + '/**/*'
-      }
-      return x
-    })
-  }
-
   globby
     .sync(globs, { cwd })
+    .reduce((files: string[], x: string) => {
+      if (x.startsWith('!') || x.startsWith('#')) {
+        //ignore negated or comment globs
+        return files
+      }
+
+      if (!extname(x) && statSync(join(cwd, x)).isDirectory()) {
+        files.push(...globby.sync(x.replace(trailingSlashes, '') + '/**/*', { cwd }))
+      } else {
+        files.push(x)
+      }
+      return files
+    }, [])
     .map(x => ensureDottedRelative(main, join(cwd, x)))
     .concat(Object.keys(file.package.dependencies || {}))
     .reduce((deps, dep) => {
@@ -106,10 +110,11 @@ export function load(wd: string, request: string, options: any) {
   }
 
   if (!options.parse) {
+    //resolve and load only
     return file
   }
 
-  if (isNodeModule(request)) {
+  if (isNodeModule(request) && file.contents) {
     //Assumptions: module folder is module name, and package.json exists
     file.moduleRoot = getModuleRoot(file.absPath, request)
     const pkgPath = join(file.moduleRoot, 'package.json')
@@ -119,7 +124,7 @@ export function load(wd: string, request: string, options: any) {
       file.deps[ensureDottedRelative(dirname(file.absPath), pkgPath)] = null
     } else {
       process.stderr.write(
-        //TODO don't log like this...(multiple threads, racing)
+        //TODO track errors like this...(racing threads)
         `[WARN]: package.json not found for: "${request}" in ${file.moduleRoot}\n`
       )
     }
