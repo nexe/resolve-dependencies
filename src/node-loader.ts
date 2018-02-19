@@ -64,20 +64,9 @@ function resolveModuleFiles(file: File) {
 
   globby
     .sync(globs, { cwd })
-    .reduce((files: string[], x: string) => {
-      if (x.startsWith('!') || x.startsWith('#')) {
-        //ignore negated or comment globs
-        return files
-      }
-
-      if (!extname(x) && statSync(join(cwd, x)).isDirectory()) {
-        files.push(...globby.sync(x.replace(trailingSlashes, '') + '/**/*', { cwd }))
-      } else {
-        files.push(x)
-      }
-      return files
-    }, [])
-    .map(x => ensureDottedRelative(main, join(cwd, x)))
+    .map(filepath => {
+      return ensureDottedRelative(main, join(cwd, filepath))
+    })
     .concat(Object.keys(file.package.dependencies || {}))
     .reduce((deps, dep) => {
       deps[dep] = null
