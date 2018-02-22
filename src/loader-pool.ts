@@ -1,53 +1,39 @@
-import { Semaphore } from '@calebboyd/semaphore'
-import { createFile, File, FileMap, isNodeModule } from './file'
-import { Worker, WorkerThread, StandardWorker } from './worker'
+import { Pool } from './pool'
+import { File, FileMap, isNodeModule } from './file'
 import { dirname } from 'path'
 import builtins from './node-builtins'
 
-const cpus = require('os').cpus().length
-export { cpus }
-
-export class LoaderPool<T = any> {
-  private pool: Worker[] = []
-  private inuse: Worker[] = []
-  private lock = new Semaphore(this.size)
-  public files: FileMap = {}
-
-  constructor(private size: number = cpus - 1, worker: any, private options: any = {}) {
-    this.pool = [...Array(this.size)].map(x => new worker('./node-loader', options))
+export class Loader extends Pool {
+  constructor(private options: any) {
+    super(options)
   }
 
-  private kill() {
-    this.pool.forEach(x => x.kill())
-    this.inuse.forEach(x => x.kill())
+  public loadEntry(wd: string, request: string, files: FileMap = {}) {
+    return this.load(wd, request, true, files).then(
+      entry => {
+        this.end()
+        return { entry, files }
+      },
+      e => {
+        this.end()
+        throw e
+      }
+    )
   }
 
-  private aqcuire() {
-    const worker = this.pool.shift()!
-    const i = this.inuse.push(worker) - 1
-    const release = () => {
-      this.pool.push(worker)
-      this.inuse.splice(i, 1)
-      this.lock.release()
-    }
-    return { worker, release }
-  }
-
-  load(wd: string, request: string) {
-    return this._load(wd, request).then(async x => {
-      this.kill()
-      return x
-    })
-  }
-
-  private _load(wd: string, request: string, parse = true): Promise<File | null> {
+  private load(
+    cwd: string,
+    request: string,
+    parse = true,
+    files: FileMap = {}
+  ): Promise<File | null> {
     return this.lock.acquire().then(async () => {
       const { worker, release } = this.aqcuire()
       let file: File
       let error: Error | null = null
 
       try {
-        file = await worker.execute<File>('node-loader', 'load', [wd, request, { parse }])
+        file = await worker.execute<File>('node-loader', 'load', [cwd, request, { parse }])
       } catch (e) {
         error = e
       } finally {
@@ -60,10 +46,10 @@ export class LoaderPool<T = any> {
         return null
       }
 
-      if (this.files[file.absPath]) {
-        return this.files[file.absPath]!
+      if (files[file.absPath]) {
+        return files[file.absPath]!
       } else {
-        this.files[file.absPath] = file
+        files[file.absPath] = file
       }
 
       const fileDir = dirname(file.absPath)
@@ -77,7 +63,7 @@ export class LoaderPool<T = any> {
           if (!this.options.strict && file.moduleRoot && !isNodeModule(req)) {
             parseDep = false
           }
-          return this._load(fileDir, req, parseDep).then(dep => {
+          return this.load(fileDir, req, parseDep, files).then(dep => {
             file.deps[req] = dep
             if ((file.moduleRoot || file.belongsTo) && dep && !dep.moduleRoot) {
               const owner = file.moduleRoot ? file : file.belongsTo

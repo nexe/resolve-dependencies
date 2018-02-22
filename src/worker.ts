@@ -3,7 +3,7 @@ import * as loader from './node-loader'
 
 export interface Worker {
   execute<T>(context: string, method: string, args?: any): Promise<T>
-  kill(): void
+  end(): void
 }
 
 export class StandardWorker implements Worker {
@@ -11,7 +11,7 @@ export class StandardWorker implements Worker {
   execute<T>(context: string, method: string, args?: any) {
     return Promise.resolve(loader.load.apply(null, args))
   }
-  kill() {}
+  end() {}
 }
 export class WorkerThread implements Worker {
   private child = fork(require.resolve('./worker-runtime'))
@@ -48,7 +48,7 @@ export class WorkerThread implements Worker {
     return this.onceReady(exec)
   }
 
-  kill() {
+  end() {
     this.child.kill()
   }
 }
