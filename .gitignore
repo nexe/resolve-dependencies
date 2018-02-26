@@ -3,3 +3,4 @@ node_modules
 .idea
 lib
 .DS_Store
+test/fixture*

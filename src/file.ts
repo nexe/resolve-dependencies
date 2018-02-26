@@ -1,4 +1,4 @@
-import { relative } from 'path'
+import { relative, sep } from 'path'
 
 export type FileMap = { [key: string]: File | null }
 export interface File {
@@ -19,11 +19,11 @@ export function isNodeModule(request: string) {
 }
 
 export function ensureDottedRelative(from: string, to: string) {
-  const rel = relative(from, to)
+  let rel = relative(from, to)
   if (!rel.startsWith('.')) {
-    return './' + rel
+    rel = './' + rel
   }
-  return rel
+  return rel.split(sep).join('/')
 }
 
 export function createFile(absPath: string): File {

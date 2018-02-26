@@ -1,7 +1,7 @@
 import { Loader } from './loader-pool'
 import { WorkerThread, StandardWorker } from './worker'
 import { File, FileMap, ensureDottedRelative } from './file'
-import { relative } from 'path'
+import * as path from 'path'
 
 export { resolve }
 export type ResolveOptions = { entries: string[]; cwd: string; strict: boolean }
@@ -12,7 +12,8 @@ export default async function resolve(...options: Partial<ResolveOptions | strin
     loader = new Loader(options),
     res = await Promise.all(
       opts.entries
-        .map(x => ensureDottedRelative(opts.cwd, x))
+        .map(entry => path.resolve(opts.cwd, entry))
+        .map(absoluteEntry => ensureDottedRelative(opts.cwd, absoluteEntry))
         .map(request => loader.loadEntry(opts.cwd, request, files))
     ),
     entryMap = opts.entries.reduce((entryMap: FileMap, entry, i) => {
