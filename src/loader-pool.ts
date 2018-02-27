@@ -1,15 +1,17 @@
 import { Pool } from './pool'
-import { File, FileMap, isNodeModule } from './file'
-import { dirname } from 'path'
+import { File, FileMap, isNodeModule, ensureDottedRelative } from './file'
+import { resolve, dirname } from 'path'
 import builtins from './node-builtins'
+import { ResolveDepOptions } from './options'
 
 export class Loader extends Pool {
-  constructor(private options: any) {
+  constructor(private options: ResolveDepOptions) {
     super(options)
   }
 
   public loadEntry(wd: string, request: string, files: FileMap = {}) {
-    return this.load(wd, request, true, files).then(
+    const entry = ensureDottedRelative(wd, resolve(wd, request))
+    return this.load(wd, entry, true, files).then(
       entry => {
         this.end()
         return { entry, files }

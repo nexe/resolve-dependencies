@@ -1,4 +1,5 @@
 ./test/**/*.spec.ts
+--timeout=20000
 --check-leaks
 --require ts-node/register
 --recursive

@@ -99,7 +99,6 @@ export function load(wd: string, request: string, options: any) {
   }
 
   if (!options.parse) {
-    //resolve and load only
     return file
   }
 
@@ -113,7 +112,7 @@ export function load(wd: string, request: string, options: any) {
       file.deps[ensureDottedRelative(dirname(file.absPath), pkgPath)] = null
     } else {
       process.stderr.write(
-        //TODO track errors like this...(racing threads)
+        //TODO don't track errors like this...(racing threads)
         `[WARN]: package.json not found for: "${request}" in ${file.moduleRoot}\n`
       )
     }
