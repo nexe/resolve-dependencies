@@ -9,7 +9,8 @@ const Tacks = require('tacks'),
 
 describe('resolve-dependencies', () => {
   let fixture: any
-  let fileNames: string[]
+  let strictFileNames: { [key: string]: string }
+  let extraFileNames: { [key: string]: string }
   let cwd: string
   let files: FileMap
 
@@ -17,7 +18,7 @@ describe('resolve-dependencies', () => {
     before(async () => {
       fixture = new Tacks(
         dir({
-          'app.js': file(`require('package-a')`),
+          'app.js': file(`require('package-a'); require('package-b')`),
           node_modules: dir({
             'package-a': dir({
               'random-file.json': file({ a: 'b' }),
@@ -31,16 +32,32 @@ describe('resolve-dependencies', () => {
                 require('path')
                 module.exports.foo = 'bar'
               `)
+            }),
+            'package-b': dir({
+              'index.js': file(`require('package-c/a.json')`),
+              'package.json': file({ name: 'package-b', dependencies: { 'package-c': 'latest' } })
+            }),
+            'package-c': dir({
+              'a.json': file({ '1234': 'asdf' }),
+              'package.json': file({ name: 'package-c' })
             })
           })
         })
       )
       cwd = path.resolve(__dirname, 'fixture-a')
-      fileNames = [
-        path.resolve(cwd, 'app.js'),
-        path.resolve(cwd, 'node_modules/package-a/package.json'),
-        path.resolve(cwd, 'node_modules/package-a/main.js')
-      ]
+      strictFileNames = {
+        'app.js': path.resolve(cwd, 'app.js'),
+        'a-main.js': path.resolve(cwd, 'node_modules/package-a/main.js'),
+        'b-index.js': path.resolve(cwd, 'node_modules/package-b/index.js'),
+        'c-a.json': path.resolve(cwd, 'node_modules/package-c/a.json'),
+        'a-package.json': path.resolve(cwd, 'node_modules/package-a/package.json'),
+        'b-package.json': path.resolve(cwd, 'node_modules/package-b/package.json'),
+        'c-package.json': path.resolve(cwd, 'node_modules/package-c/package.json')
+      }
+      extraFileNames = {
+        'random-file.txt': path.resolve(cwd, 'node_modules/package-a/random-file.txt'),
+        'random-file.json': path.resolve(cwd, 'node_modules/package-a/random-file.json')
+      }
       fixture.create(cwd)
       files = (await resolve('./app.js', { cwd })).files
     })
@@ -50,22 +67,25 @@ describe('resolve-dependencies', () => {
     })
 
     it('should resolve all files from an entry', async () => {
-      expect(files[fileNames[0]].deps['package-a']).to.equal(files[fileNames[2]])
-      expect(files[fileNames[2]].package.name).to.equal('package-a')
-      expect(Object.keys(files)).to.have.lengthOf(3)
+      Object.keys(strictFileNames).forEach(x => {
+        expect(files[strictFileNames[x]]).not.to.be.undefined
+      })
+      expect(Object.keys(files)).to.have.lengthOf(7)
     })
 
     it('should not resolve node builtins', async () => {
-      expect(files[fileNames[2]].deps['path']).to.equal(null)
+      expect(files[strictFileNames['a-main.js']].deps['path']).to.equal(null)
     })
 
-    it('should resolve all package files when strict: false', async () => {
+    it('should resolve *all* package files when strict: false', async () => {
       files = (await resolve('./app.js', { cwd, strict: false })).files
-      const randomFile = files[path.join(cwd, 'node_modules', 'package-a', 'random-file.txt')]
-      const randomJson = files[path.join(cwd, 'node_modules', 'package-a', 'random-file.json')]
-      expect(Object.keys(files)).to.have.lengthOf(5)
-      expect(randomFile.contents).to.equal('')
-      expect(randomJson.contents).to.equal('{"a":"b"}')
+      Object.keys(extraFileNames).forEach(x => {
+        expect(files[extraFileNames[x]]).not.to.be.undefined
+      })
+      Object.keys(strictFileNames).forEach(x => {
+        expect(files[strictFileNames[x]]).not.to.be.undefined
+      })
+      expect(Object.keys(files)).to.have.lengthOf(9)
     })
   })
 })
