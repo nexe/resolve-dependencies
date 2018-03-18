@@ -2,10 +2,11 @@ import { Loader } from './loader-pool'
 import { WorkerThread, StandardWorker } from './worker'
 import { File, FileMap, ensureDottedRelative } from './file'
 import { ResolveDepOptions, normalizeOptions } from './options'
+import { resolve as resolveFileName } from './node-loader'
 
 import * as path from 'path'
 
-export { resolve }
+export { resolve, resolveFileName }
 export default async function resolve(...options: Partial<ResolveDepOptions | string>[]) {
   const opts = normalizeOptions(options),
     files: FileMap = {},

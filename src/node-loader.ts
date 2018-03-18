@@ -25,7 +25,7 @@ function getPackageName(request: string) {
   return parts[0]
 }
 
-export function resolve(from: string, request: string, silent = false) {
+export function resolve(from: string, request: string, { silent = false } = {}) {
   let result = {
     absPath: '',
     pkgDir: '',
@@ -66,7 +66,7 @@ export function load(wd: string, request: string, options = defaultOptions) {
 
   if (isNodeModule(request)) {
     if (!pkg) {
-      const resolution = resolve(wd, getPackageName(request), /*silent*/ true)
+      const resolution = resolve(wd, getPackageName(request), { silent: true })
       pkg = resolution.pkg
       pkgDir = resolution.pkgDir
     }
