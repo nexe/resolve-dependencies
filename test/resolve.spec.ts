@@ -47,8 +47,8 @@ describe('resolve-dependencies', () => {
       cwd = path.resolve(__dirname, 'fixture-a')
       strictFileNames = {
         'app.js': path.resolve(cwd, 'app.js'),
-        'a-main.js': path.resolve(cwd, 'node_modules/package-a/main.js'),
         'b-index.js': path.resolve(cwd, 'node_modules/package-b/index.js'),
+        'a-main.js': path.resolve(cwd, 'node_modules/package-a/main.js'),
         'c-a.json': path.resolve(cwd, 'node_modules/package-c/a.json'),
         'a-package.json': path.resolve(cwd, 'node_modules/package-a/package.json'),
         'b-package.json': path.resolve(cwd, 'node_modules/package-b/package.json'),
@@ -78,7 +78,7 @@ describe('resolve-dependencies', () => {
     })
 
     it('should resolve *all* package files when strict: false', async () => {
-      files = (await resolve('./app.js', { cwd, strict: false })).files
+      files = (await resolve('./app.js', { cwd, expand: true })).files
       Object.keys(extraFileNames).forEach(x => {
         expect(files[extraFileNames[x]]).not.to.be.undefined
       })

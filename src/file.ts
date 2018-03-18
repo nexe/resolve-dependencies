@@ -1,11 +1,17 @@
 import { relative, sep } from 'path'
 
+const esmRegex = /(^\s*|[}\);\n]\s*)(import\s*(['"]|(\*\s+as\s+)?(?!type)([^"'\(\)\n; ]+)\s*from\s*['"]|\{)|export\s+\*\s+from\s+["']|export\s*(\{|default|function|class|var|const|let|async\s+function))/
+
+export function isScript(code: string) {
+  return !Boolean(code.match(esmRegex))
+}
+
 export type FileMap = { [key: string]: File | null }
 export interface File {
   deps: FileMap
   belongsTo?: File
   absPath: string
-  contents: string
+  contents: string | null
   variableImports?: boolean
   moduleRoot?: string
   package?: any
@@ -30,7 +36,7 @@ export function createFile(absPath: string): File {
   return {
     deps: {},
     absPath,
-    contents: '',
+    contents: null,
     variableImports
   }
 }

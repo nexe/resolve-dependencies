@@ -1,7 +1,7 @@
 import { Pool } from './pool'
 import { File, FileMap, isNodeModule, ensureDottedRelative } from './file'
 import { resolve, dirname } from 'path'
-import builtins from './node-builtins'
+import nodeResolve = require('resolve')
 import { ResolveDepOptions } from './options'
 
 export class Loader extends Pool {
@@ -10,8 +10,8 @@ export class Loader extends Pool {
   }
 
   public loadEntry(wd: string, request: string, files: FileMap = {}) {
-    const entry = ensureDottedRelative(wd, resolve(wd, request))
-    return this.load(wd, entry, true, files).then(
+    const mainFile = ensureDottedRelative(wd, resolve(wd, request))
+    return this.load(wd, mainFile, files).then(
       entry => {
         this.end()
         return { entry, files }
@@ -23,19 +23,14 @@ export class Loader extends Pool {
     )
   }
 
-  private load(
-    cwd: string,
-    request: string,
-    parse = true,
-    files: FileMap = {}
-  ): Promise<File | null> {
+  private load(cwd: string, request: string, files: FileMap = {}): Promise<File | null> {
     return this.lock.acquire().then(async () => {
       const { worker, release } = this.aqcuire()
       let file: File
       let error: Error | null = null
 
       try {
-        file = await worker.execute<File>('node-loader', 'load', [cwd, request, { parse }])
+        file = await worker.execute<File>('node-loader', 'load', [cwd, request, this.options])
       } catch (e) {
         error = e
       } finally {
@@ -48,7 +43,7 @@ export class Loader extends Pool {
         return null
       }
 
-      if (files[file.absPath]) {
+      if (file.absPath in files) {
         return files[file.absPath]!
       } else {
         files[file.absPath] = file
@@ -58,14 +53,10 @@ export class Loader extends Pool {
 
       return Promise.all(
         Object.keys(file.deps).map(req => {
-          if (~builtins.indexOf(req)) {
+          if (nodeResolve.isCore(req)) {
             return (file.deps[req] = null as any)
           }
-          let parseDep = true
-          if (!this.options.strict && file.moduleRoot && !isNodeModule(req)) {
-            parseDep = false
-          }
-          return this.load(fileDir, req, parseDep, files).then(dep => {
+          return this.load(fileDir, req, files).then(dep => {
             file.deps[req] = dep
             if ((file.moduleRoot || file.belongsTo) && dep && !dep.moduleRoot) {
               const owner = file.moduleRoot ? file : file.belongsTo
