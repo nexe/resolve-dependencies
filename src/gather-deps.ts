@@ -29,7 +29,7 @@ export function gatherDependencies(code: string) {
         result.deps[node.source.value] = null
       }
     },
-    options = { next: true, delegate }
+    options = { next: true, tolerant: true, delegate }
 
   if (isScript(code)) {
     parseScript(code, options)

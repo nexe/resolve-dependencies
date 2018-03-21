@@ -1,7 +1,7 @@
 import { Pool } from './pool'
 import { File, FileMap, isNodeModule, ensureDottedRelative } from './file'
 import { resolve, dirname } from 'path'
-import nodeResolve = require('resolve')
+import builtins from './node-builtins'
 import { ResolveDepOptions } from './options'
 
 export class Loader extends Pool {
@@ -53,7 +53,7 @@ export class Loader extends Pool {
 
       return Promise.all(
         Object.keys(file.deps).map(req => {
-          if (nodeResolve.isCore(req)) {
+          if (~builtins.indexOf(req)) {
             return (file.deps[req] = null as any)
           }
           return this.load(fileDir, req, files).then(dep => {

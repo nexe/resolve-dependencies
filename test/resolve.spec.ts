@@ -77,7 +77,7 @@ describe('resolve-dependencies', () => {
       expect(files[strictFileNames['a-main.js']].deps['path']).to.equal(null)
     })
 
-    it('should resolve *all* package files when strict: false', async () => {
+    it('should resolve *all* package files when expand: true', async () => {
       files = (await resolve('./app.js', { cwd, expand: true })).files
       Object.keys(extraFileNames).forEach(x => {
         expect(files[extraFileNames[x]]).not.to.be.undefined

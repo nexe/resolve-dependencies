@@ -1,6 +1,6 @@
 {
   "name": "resolve-dependencies",
-  "version": "1.1.0",
+  "version": "1.1.3",
   "description": "Resolve an entrypoint's dependencies",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
@@ -22,10 +22,10 @@
   "license": "MIT",
   "devDependencies": {
     "@types/chai": "^4.1.2",
+    "@types/enhanced-resolve": "^3.0.5",
     "@types/globby": "^6.1.0",
     "@types/mocha": "^2.2.48",
     "@types/node": "^9.4.7",
-    "@types/resolve": "0.0.7",
     "chai": "^4.1.2",
     "mocha": "^5.0.4",
     "prettier": "^1.11.1",
@@ -38,8 +38,8 @@
   },
   "dependencies": {
     "@calebboyd/semaphore": "^1.2.0",
-    "cherow": "^1.3.0",
-    "globby": "^8.0.1",
-    "resolve": "^1.5.0"
+    "cherow": "^1.3.8",
+    "enhanced-resolve": "^4.0.0",
+    "globby": "^8.0.1"
   }
 }
