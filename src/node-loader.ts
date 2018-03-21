@@ -18,7 +18,7 @@ const resolver = ResolverFactory.createResolver({
   nodeResolve = resolver.resolve.bind(resolver, {
     environments: ['node+es3+es5+process+native']
   }),
-  moduleGlob = ['**/*', '!node_modules'],
+  moduleGlob = ['**/*', '!node_modules', '!test'],
   defaultOptions = { loadContent: true, expand: false }
 
 function getPackageName(request: string) {
@@ -85,12 +85,13 @@ export function load(wd: string, request: string, options = defaultOptions) {
   if (isNodeModule(request)) {
     if (pkg && pkgPath) {
       const pkgDir = (file.moduleRoot = dirname(pkgPath))
+      const fileDir = dirname(file.absPath)
       file.package = pkg
-      file.deps[ensureDottedRelative(pkgDir, pkgPath)] = null
+      file.deps[ensureDottedRelative(fileDir, pkgPath)] = null
       if (options.expand) {
         globby
           .sync(file.package.files || moduleGlob, { cwd: pkgDir })
-          .map(dep => ensureDottedRelative(pkgDir, join(pkgDir, dep)))
+          .map(dep => ensureDottedRelative(fileDir, join(pkgDir, dep)))
           .filter(relDep => file.absPath !== join(pkgDir, relDep))
           .forEach(relDep => {
             file.deps[relDep] = file.deps[relDep] || null
