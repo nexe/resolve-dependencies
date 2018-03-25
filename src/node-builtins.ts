@@ -1,6 +1,7 @@
-const builtinBlacklist = ['freelist', 'sys']
-const builtins = Object.keys((process as any).binding('natives'))
-  .filter(x => !/^_|^internal|\//.test(x) && builtinBlacklist.indexOf(x) === -1)
-  .sort()
+const builtins =
+  require('module').builtinModules ||
+  Object.keys((process as any).binding('natives'))
+    .filter(x => !/^_|^internal|\//.test(x))
+    .sort()
 
 export default builtins
