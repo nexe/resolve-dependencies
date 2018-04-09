@@ -5,8 +5,11 @@ import builtins from './node-builtins'
 import { ResolveDepOptions } from './options'
 
 export class Loader extends Pool {
-  constructor(private options: ResolveDepOptions) {
-    super(options)
+  private options: ResolveDepOptions
+  constructor(options: ResolveDepOptions) {
+    const opts = { ...options, files: {} }
+    super(opts)
+    this.options = opts
   }
 
   public loadEntry(wd: string, request: string, files: FileMap = {}) {

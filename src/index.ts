@@ -7,10 +7,9 @@ import * as path from 'path'
 
 export default async function resolve(...options: (Partial<ResolveDepOptions> | string)[]) {
   const opts = normalizeOptions(options),
-    files: FileMap = {},
     loader = new Loader(opts),
     res = await Promise.all(
-      opts.entries.map(request => loader.loadEntry(opts.cwd, request, files))
+      opts.entries.map(request => loader.loadEntry(opts.cwd, request, opts.files))
     ),
     entryMap = opts.entries.reduce(
       (entryMap, entry, i) => {
@@ -20,6 +19,6 @@ export default async function resolve(...options: (Partial<ResolveDepOptions> | 
       {} as { [key: string]: File }
     )
 
-  return { files, entries: entryMap }
+  return { files: opts.files, entries: entryMap }
 }
 export { resolve, resolveFileName }

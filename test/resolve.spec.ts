@@ -84,7 +84,8 @@ describe('resolve-dependencies', () => {
     })
 
     it('should not resolve node builtins', async () => {
-      expect(files[strictFileNames['a-main.js']].deps['path']).to.equal(null)
+      const name = strictFileNames['a-main.js']
+      expect(files[name]!.deps['path']).to.equal(null)
     })
 
     it('should resolve *all* package files when expand: true', async () => {
