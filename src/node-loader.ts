@@ -10,27 +10,27 @@ export type JsLoaderOptions = {
   expand: boolean
 }
 
-const resolver = ResolverFactory.createResolver({
+function createResolver(useSyncFileSystemCalls = true) {
+  const resolver = ResolverFactory.createResolver({
     extensions: ['.js', '.json', '.node'],
     useSyncFileSystemCalls: true,
     fileSystem: new CachedInputFileSystem(new NodeJsInputFileSystem(), 4000)
-  } as any),
-  nodeResolve = resolver.resolve.bind(resolver, {
-    environments: ['node+es3+es5+process+native']
-  }),
-  moduleGlob = ['**/*', '!node_modules', '!test'],
-  defaultOptions = { loadContent: true, expand: false }
+  } as any)
 
-function getPackageName(request: string) {
-  const parts = request.split('/')
-  if (request.startsWith('@')) {
-    parts.length = 2
-    return parts.join('/')
-  }
-  return parts[0]
+  return resolver.resolve.bind(resolver, {
+    environments: ['node+es3+es5+process+native']
+  })
 }
 
-export function resolve(from: string, request: string, { silent = false } = {}) {
+const nodeResolve = createResolver(),
+  asyncNodeResolve = createResolver(false),
+  moduleGlob = ['**/*', '!node_modules', '!test'],
+  resolveDefaults = { silent: false, sync: true },
+  identity = <T>(x: T) => x,
+  defaultOptions = { loadContent: true, expand: false }
+
+export function resolve(from: string, request: string, options = resolveDefaults) {
+  const { silent, sync } = Object.assign({}, resolveDefaults, options)
   let result = {
     absPath: '',
     pkgPath: '',
