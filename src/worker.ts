@@ -1,4 +1,5 @@
 import { fork } from 'child_process'
+import { basename } from 'path'
 import * as loader from './node-loader'
 
 export interface Worker {
@@ -20,8 +21,8 @@ export class WorkerThread implements Worker {
     this.child.once('message', x => resolve(x === 'ready'))
   ).then(x => (this.ready = x))
 
-  constructor(module: string, options: any) {
-    this.child.send({ module, options })
+  constructor(moduleName: string, options: any) {
+    this.child.send({ moduleName, contextName: basename(moduleName), options })
   }
 
   private onceReady(exec: () => Promise<any>) {
@@ -32,7 +33,7 @@ export class WorkerThread implements Worker {
     return this.starting.then(() => exec())
   }
 
-  execute<T>(context: string, method: string, args?: any): Promise<T> {
+  execute<T>(contextName: string, method: string, args?: any): Promise<T> {
     const exec = () => {
       const response = new Promise((resolve, reject) => {
         this.child.once('message', payload => {
@@ -42,7 +43,7 @@ export class WorkerThread implements Worker {
           resolve(payload.result)
         })
       })
-      this.child.send({ context, method, args })
+      this.child.send({ contextName, method, args })
       return response
     }
     return this.onceReady(exec)

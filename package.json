@@ -40,7 +40,7 @@
   },
   "dependencies": {
     "@calebboyd/semaphore": "^1.2.0",
-    "cherow": "^1.4.4",
+    "cherow": "^1.4.10",
     "enhanced-resolve": "^4.0.0",
     "globby": "^8.0.1"
   }

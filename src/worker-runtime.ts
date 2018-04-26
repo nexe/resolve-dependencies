@@ -1,35 +1,24 @@
-import { basename } from 'path'
-const contexts: any = {}
-
 if (process.send) {
-  process.on('message', async message => {
-    const contextName = message.context || basename(message.module)
+  const contexts: any = {},
+    send = process.send.bind(process)
 
-    if (!contextName) {
-      process.send!({ error: 'No context provided' })
-    }
+  process.on('message', async ({ moduleName, contextName, id, method, options, args }) => {
+    const ctx = contexts[contextName]
 
-    if (message.module) {
-      contexts[contextName] = require(message.module)
+    if (moduleName) {
+      contexts[contextName] = require(moduleName)
       let starting = Promise.resolve()
-      if (contexts[contextName].initialize) {
-        starting = Promise.resolve(contexts[contextName].initialize(message.options))
+      if ('function' === typeof contexts[contextName].initialize) {
+        starting = Promise.resolve(contexts[contextName].initialize(options))
       }
       starting.then(() => {
-        process.send!({ result: 'ready' })
+        send({ result: 'ready' })
       })
       return
     }
 
-    if (!message.method) {
-      process.send!({ error: 'You must specify a method in: "' + contextName + '"' })
-      return
-    }
-
-    const context = contexts[contextName]
-
-    if (!context) {
-      process.send!({ error: 'No context exists with name: "' + contextName + '"' })
+    if (!method || !ctx) {
+      send({ error: `Error: Could not find "${method}" in "${contextName}"`, id })
       return
     }
 
@@ -37,10 +26,10 @@ if (process.send) {
     let error = null
 
     try {
-      result = await Promise.resolve(context[message.method].apply(context, message.args))
+      result = await Promise.resolve(ctx[method].apply(ctx, args))
     } catch (e) {
       error = e.stack
     }
-    process.send!({ result, error })
+    send({ result, error, id })
   })
 }
