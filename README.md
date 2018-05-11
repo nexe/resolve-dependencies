@@ -1,10 +1,8 @@
 # resolve-dependencies
 
+Given an entrypoint, get a map of files, with their contents, description and dependencies. 
 
-Given an entrypoint, get a tree and list of dependencies. 
-Converts modules to commonjs.
-
-File processing (babel) occurs concurrently in (CPUs - 1) child processes.
+File processing occurs concurrently in (CPUs - 1) child processes.
 
 ```javascript
 import { resolve } from 'resolve-dependencies'

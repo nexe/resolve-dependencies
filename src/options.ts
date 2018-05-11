@@ -8,7 +8,9 @@ export type ResolveDepOptions = {
   files: FileMap
 }
 
-export function normalizeOptions(args: Partial<ResolveDepOptions | string>[]): ResolveDepOptions {
+export function normalizeOptions(
+  args: Partial<ResolveDepOptions | string>[]
+): ResolveDepOptions {
   const options = {
     entries: [] as string[],
     cwd: process.cwd(),

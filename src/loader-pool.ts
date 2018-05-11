@@ -1,73 +1,101 @@
-import { Pool } from './pool'
 import { File, FileMap, isNodeModule, ensureDottedRelative } from './file'
 import { resolve, dirname } from 'path'
+import { WorkerThread } from './worker'
 import builtins from './node-builtins'
+const cpus = require('os').cpus().length
 import { ResolveDepOptions } from './options'
 
-export class Loader extends Pool {
-  private options: ResolveDepOptions
-  constructor(options: ResolveDepOptions) {
-    const opts = { ...options, files: {} }
-    super(opts)
-    this.options = opts
+export class Loader {
+  private pool: WorkerThread[]
+  private workerOptions: ResolveDepOptions
+  private size = cpus - 1
+  private idx = 0
+  private initializing: Promise<any> | undefined
+
+  constructor(private options: ResolveDepOptions) {
+    this.pool = [...Array(this.size)].map(
+      x => new WorkerThread({ taskConccurency: 10 })
+    )
+    this.workerOptions = { ...options, files: {} }
   }
 
-  public loadEntry(wd: string, request: string, files: FileMap = {}) {
+  initialize() {
+    if (this.initializing) {
+      return this.initializing
+    }
+    return (this.initializing = Promise.all(
+      this.pool.map(x =>
+        x.sendMessage({
+          modulePath: require.resolve('./node-loader'),
+          contextName: 'node-loader',
+          options: this.workerOptions
+        })
+      )
+    ))
+  }
+
+  quit() {
+    this.pool.forEach(x => x.end())
+  }
+
+  private getWorker() {
+    const worker = this.pool[this.idx++]
+    if (this.idx === this.pool.length) {
+      this.idx = 0
+    }
+    return worker
+  }
+
+  loadEntry(wd: string, request: string, files: FileMap = {}) {
     const mainFile = ensureDottedRelative(wd, resolve(wd, request))
     return this.load(wd, mainFile, files).then(
       entry => {
-        this.end()
         return { entry, files }
       },
       e => {
-        this.end()
         throw e
       }
     )
   }
 
-  private load(cwd: string, request: string, files: FileMap = {}): Promise<File | null> {
-    return this.lock.acquire().then(async () => {
-      const { worker, release } = this.aqcuire()
-      let file: File
-      let error: Error | null = null
-
-      try {
-        file = await worker.execute<File>('node-loader', 'load', [cwd, request, this.options])
-      } catch (e) {
-        error = e
-      } finally {
-        release()
-        if (error) throw error
-        file = file!
-      }
-
-      if (!file) {
-        return null
-      }
-
-      if (file.absPath in files) {
-        return files[file.absPath]!
-      } else {
-        files[file.absPath] = file
-      }
-
-      const fileDir = dirname(file.absPath)
-
-      return Promise.all(
-        Object.keys(file.deps).map(req => {
-          if (~builtins.indexOf(req)) {
-            return (file.deps[req] = null as any)
-          }
-          return this.load(fileDir, req, files).then(dep => {
-            file.deps[req] = dep
-            if ((file.moduleRoot || file.belongsTo) && dep && !dep.moduleRoot) {
-              const owner = file.moduleRoot ? file : file.belongsTo
-              dep.belongsTo = owner
-            }
-          })
-        })
-      ).then(() => file)
+  private async load(
+    cd: string,
+    request: string,
+    files: FileMap = {}
+  ): Promise<File | null> {
+    const worker = this.getWorker()
+    const file = await worker.sendMessage({
+      contextName: 'node-loader',
+      method: 'load',
+      args: [cd, request, this.workerOptions]
     })
+
+    if (!file) {
+      return null
+    }
+
+    if (files[file.absPath] !== undefined) {
+      return files[file.absPath]
+    } else {
+      files[file.absPath] = file
+    }
+
+    const fileDir = dirname(file.absPath)
+
+    await Promise.all(
+      Object.keys(file.deps).map(req => {
+        if (~builtins.indexOf(req)) {
+          return (file.deps[req] = null as any)
+        }
+        return this.load(fileDir, req, files).then(dep => {
+          file.deps[req] = dep
+          if ((file.moduleRoot || file.belongsTo) && dep && !dep.moduleRoot) {
+            const owner = file.moduleRoot ? file : file.belongsTo
+            dep.belongsTo = owner
+          }
+        })
+      })
+    )
+    return file
   }
 }

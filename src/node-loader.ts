@@ -2,8 +2,18 @@ import { readFileSync, statSync } from 'fs'
 import globby = require('globby')
 import { join, sep, normalize, dirname, extname } from 'path'
 import { gatherDependencies } from './gather-deps'
-import { File, isScript, createFile, isNodeModule, ensureDottedRelative } from './file'
-import { ResolverFactory, CachedInputFileSystem, NodeJsInputFileSystem } from 'enhanced-resolve'
+import {
+  File,
+  isScript,
+  createFile,
+  isNodeModule,
+  ensureDottedRelative
+} from './file'
+import {
+  ResolverFactory,
+  CachedInputFileSystem,
+  NodeJsInputFileSystem
+} from 'enhanced-resolve'
 
 export type JsLoaderOptions = {
   loadContent: boolean
@@ -29,7 +39,11 @@ const nodeResolve = createResolver(),
   identity = <T>(x: T) => x,
   defaultOptions = { loadContent: true, expand: false }
 
-export function resolve(from: string, request: string, options = resolveDefaults) {
+export function resolve(
+  from: string,
+  request: string,
+  options = resolveDefaults
+) {
   const { silent, sync } = Object.assign({}, resolveDefaults, options)
   let result = {
     absPath: '',
@@ -38,14 +52,19 @@ export function resolve(from: string, request: string, options = resolveDefaults
   }
   try {
     let error = null
-    nodeResolve(from, request, {}, (err: Error | null, path: string, data: any) => {
-      if (err) {
-        return (error = err)
+    nodeResolve(
+      from,
+      request,
+      {},
+      (err: Error | null, path: string, data: any) => {
+        if (err) {
+          return (error = err)
+        }
+        result.absPath = path
+        result.pkgPath = data.descriptionFilePath
+        result.pkg = data.descriptionFileData
       }
-      result.absPath = path
-      result.pkgPath = data.descriptionFilePath
-      result.pkg = data.descriptionFileData
-    })
+    )
     if (error) {
       throw error
     }
@@ -78,7 +97,9 @@ export function load(wd: string, request: string, options = defaultOptions) {
       Object.assign(file.deps, parseResult.deps)
       file.variableImports = parseResult.variable
     } catch (e) {
-      process.stderr.write(`[ERROR]: Error parsing file: "${file.absPath}"\n${e.stack}\n`)
+      process.stderr.write(
+        `[ERROR]: Error parsing file: "${file.absPath}"\n${e.stack}\n`
+      )
     }
   }
 

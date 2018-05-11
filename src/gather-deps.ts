@@ -2,7 +2,9 @@ import { parseScript, parseModule } from 'cherow'
 import { isScript } from './file'
 
 function isNodeAString(node: any) {
-  return Boolean(node && (node.type === 'Literal' || node.type === 'StringLiteral'))
+  return Boolean(
+    node && (node.type === 'Literal' || node.type === 'StringLiteral')
+  )
 }
 
 function isRequire(node: any) {
@@ -13,14 +15,34 @@ function isImport(node: any) {
   return node.callee.type === 'Import'
 }
 
+function walk(node: any, visit: Function): void {
+  if (!node || typeof node.type !== 'string' || node._visited) {
+    return
+  }
+  visit(node)
+  node._visited = true
+  for (let childNode in node) {
+    const child = node[childNode]
+    if (Array.isArray(child)) {
+      for (let i = 0; i < child.length; i++) {
+        walk(child[i], visit)
+      }
+    } else {
+      walk(child, visit)
+    }
+  }
+}
+
 export function gatherDependencies(code: string) {
   const result: { variable: boolean; deps: { [key: string]: any } } = {
       variable: false,
       deps: {}
     },
-    delegate = (node: any) => {
-      if (!node) return
-      if (node.type === 'CallExpression' && (isRequire(node) || isImport(node))) {
+    visit = (node: any) => {
+      if (
+        node.type === 'CallExpression' &&
+        (isRequire(node) || isImport(node))
+      ) {
         const request = node.arguments[0]
         if (isNodeAString(request)) {
           result.deps[request.value] = null
@@ -32,12 +54,12 @@ export function gatherDependencies(code: string) {
         result.deps[node.source.value] = null
       }
     },
-    options = { node: true, next: true, globalReturn: true, skipShebang: true, delegate }
+    options = { node: true, next: true, globalReturn: true, skipShebang: true },
+    ast = isScript(code)
+      ? parseScript(code, options)
+      : parseModule(code, options)
 
-  if (isScript(code)) {
-    parseScript(code, options)
-  } else {
-    parseModule(code, options)
-  }
+  walk(ast, visit)
+
   return result
 }
