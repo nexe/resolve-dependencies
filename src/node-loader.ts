@@ -1,19 +1,12 @@
-import { readFileSync, statSync } from 'fs'
+import { readFile as fsReadFile } from 'fs'
 import globby = require('globby')
+import pify = require('pify')
+const readFile = pify(fsReadFile)
 import { join, sep, normalize, dirname, extname } from 'path'
 import { gatherDependencies } from './gather-deps'
-import {
-  File,
-  isScript,
-  createFile,
-  isNodeModule,
-  ensureDottedRelative
-} from './file'
-import {
-  ResolverFactory,
-  CachedInputFileSystem,
-  NodeJsInputFileSystem
-} from 'enhanced-resolve'
+import { File, isScript, createFile, isNodeModule, ensureDottedRelative } from './file'
+import { ResolverFactory, CachedInputFileSystem, NodeJsInputFileSystem } from 'enhanced-resolve'
+import { createDeferred, createDeferredFactory } from '@calebboyd/semaphore'
 
 export type JsLoaderOptions = {
   loadContent: boolean
@@ -35,52 +28,42 @@ function createResolver(useSyncFileSystemCalls = true) {
 const nodeResolve = createResolver(),
   asyncNodeResolve = createResolver(false),
   moduleGlob = ['**/*', '!node_modules', '!test'],
-  resolveDefaults = { silent: false, sync: true },
   identity = <T>(x: T) => x,
   defaultOptions = { loadContent: true, expand: false }
 
 export function resolve(
   from: string,
-  request: string,
-  options = resolveDefaults
-) {
-  const { silent, sync } = Object.assign({}, resolveDefaults, options)
+  request: string
+): Promise<{
+  absPath: string
+  pkgPath: string
+  pkg: any
+  warning: string
+}> {
   let result = {
     absPath: '',
     pkgPath: '',
-    pkg: null
+    pkg: null,
+    warning: ''
   }
-  try {
-    let error = null
-    nodeResolve(
-      from,
-      request,
-      {},
-      (err: Error | null, path: string, data: any) => {
-        if (err) {
-          return (error = err)
-        }
-        result.absPath = path
-        result.pkgPath = data.descriptionFilePath
-        result.pkg = data.descriptionFileData
+  return new Promise((resolve, reject) => {
+    asyncNodeResolve(from, request, {}, (err: Error | null, path: string, data: any) => {
+      if (err) {
+        result.warning = err.message
+        return resolve(result)
       }
-    )
-    if (error) {
-      throw error
-    }
-  } catch (e) {
-    if (!silent) {
-      process.stderr.write('[WARN]: ' + e.message + '\n')
-    }
-  } finally {
-    return result
-  }
+      result.absPath = path
+      result.pkgPath = data.descriptionFilePath
+      result.pkg = data.descriptionFileData
+      resolve(result)
+    })
+  })
 }
 
-export function load(wd: string, request: string, options = defaultOptions) {
-  let { absPath, pkg, pkgPath } = resolve(wd, request)
+export async function load(wd: string, request: string, options = defaultOptions) {
+  let { absPath, pkg, pkgPath, warning } = await resolve(wd, request)
   if (!absPath) {
-    return null
+    return { warning: warning }
   }
   const file = createFile(absPath)
   const isJs = absPath.endsWith('.js')
@@ -88,18 +71,15 @@ export function load(wd: string, request: string, options = defaultOptions) {
   file.absPath = absPath
 
   if (isJs || absPath.endsWith('json')) {
-    file.contents = readFileSync(absPath, 'utf-8')
+    file.contents = await readFile(absPath, 'utf-8')
   }
-
   if (isJs) {
     try {
       const parseResult = gatherDependencies(file.contents!)
       Object.assign(file.deps, parseResult.deps)
       file.variableImports = parseResult.variable
     } catch (e) {
-      process.stderr.write(
-        `[ERROR]: Error parsing file: "${file.absPath}"\n${e.stack}\n`
-      )
+      return { warning: `Error parsing file: "${file.absPath}"\n${e.stack}` }
     }
   }
 
@@ -110,8 +90,8 @@ export function load(wd: string, request: string, options = defaultOptions) {
       file.package = pkg
       file.deps[ensureDottedRelative(fileDir, pkgPath)] = null
       if (options.expand) {
-        globby
-          .sync(file.package.files || moduleGlob, { cwd: pkgDir })
+        const globs = await globby(file.package.files || moduleGlob, { cwd: pkgDir })
+        globs
           .map(dep => ensureDottedRelative(fileDir, join(pkgDir, dep)))
           .filter(relDep => file.absPath !== join(pkgDir, relDep))
           .forEach(relDep => {

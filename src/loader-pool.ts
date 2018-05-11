@@ -13,9 +13,7 @@ export class Loader {
   private initializing: Promise<any> | undefined
 
   constructor(private options: ResolveDepOptions) {
-    this.pool = [...Array(this.size)].map(
-      x => new WorkerThread({ taskConccurency: 10 })
-    )
+    this.pool = [...Array(this.size)].map(x => new WorkerThread({ taskConccurency: 100 }))
     this.workerOptions = { ...options, files: {} }
   }
 
@@ -58,19 +56,15 @@ export class Loader {
     )
   }
 
-  private async load(
-    cd: string,
-    request: string,
-    files: FileMap = {}
-  ): Promise<File | null> {
+  private async load(cd: string, request: string, files: FileMap = {}): Promise<File | null> {
     const worker = this.getWorker()
     const file = await worker.sendMessage({
       contextName: 'node-loader',
       method: 'load',
       args: [cd, request, this.workerOptions]
     })
-
-    if (!file) {
+    if ('warning' in file) {
+      console.log(file.warning) //FIXME
       return null
     }
 

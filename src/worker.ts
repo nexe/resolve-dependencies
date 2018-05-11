@@ -10,10 +10,10 @@ export type IpcArgs =
   | { contextName: string; method: string; args: any[] }
 
 type IpcMessage = { result: any; error: string; id: number }
-const createDeferred = createDeferredFactory<File>()
+const createDeferred = createDeferredFactory<File | { warning: string }>()
 export class WorkerThread {
   private lock: Semaphore
-  private pending: { [key: number]: Deferred<File> } = {}
+  private pending: { [key: number]: Deferred<File | { warning: string }> } = {}
   private child = fork(require.resolve('./worker-runtime'))
   constructor({ taskConccurency = 10 } = {}) {
     this.lock = new Semaphore(taskConccurency)

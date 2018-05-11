@@ -5,17 +5,13 @@ import { resolve as resolveFileName } from './node-loader'
 
 import * as path from 'path'
 
-export default async function resolve(
-  ...options: (Partial<ResolveDepOptions> | string)[]
-) {
+export default async function resolve(...options: (Partial<ResolveDepOptions> | string)[]) {
   const opts = normalizeOptions(options),
     loader = new Loader(opts)
   await loader.initialize()
 
   const res = await Promise.all(
-      opts.entries.map(request =>
-        loader.loadEntry(opts.cwd, request, opts.files)
-      )
+      opts.entries.map(request => loader.loadEntry(opts.cwd, request, opts.files))
     ),
     entryMap = opts.entries.reduce(
       (entryMap, entry, i) => {

@@ -2,9 +2,7 @@ import { parseScript, parseModule } from 'cherow'
 import { isScript } from './file'
 
 function isNodeAString(node: any) {
-  return Boolean(
-    node && (node.type === 'Literal' || node.type === 'StringLiteral')
-  )
+  return Boolean(node && (node.type === 'Literal' || node.type === 'StringLiteral'))
 }
 
 function isRequire(node: any) {
@@ -39,10 +37,7 @@ export function gatherDependencies(code: string) {
       deps: {}
     },
     visit = (node: any) => {
-      if (
-        node.type === 'CallExpression' &&
-        (isRequire(node) || isImport(node))
-      ) {
+      if (node.type === 'CallExpression' && (isRequire(node) || isImport(node))) {
         const request = node.arguments[0]
         if (isNodeAString(request)) {
           result.deps[request.value] = null
@@ -55,9 +50,7 @@ export function gatherDependencies(code: string) {
       }
     },
     options = { node: true, next: true, globalReturn: true, skipShebang: true },
-    ast = isScript(code)
-      ? parseScript(code, options)
-      : parseModule(code, options)
+    ast = isScript(code) ? parseScript(code, options) : parseModule(code, options)
 
   walk(ast, visit)
 
