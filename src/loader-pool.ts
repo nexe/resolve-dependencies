@@ -9,7 +9,7 @@ export class Loader {
   private pool: WorkerThread[]
   private workerOptions: ResolveDepOptions
   private size = cpus - 1
-  private idx = 0
+  private currentWorker = 0
   private initializing: Promise<any> | undefined
 
   constructor(private options: ResolveDepOptions) {
@@ -37,9 +37,9 @@ export class Loader {
   }
 
   private getWorker() {
-    const worker = this.pool[this.idx++]
-    if (this.idx === this.pool.length) {
-      this.idx = 0
+    const worker = this.pool[this.currentWorker++]
+    if (this.currentWorker === this.pool.length) {
+      this.currentWorker = 0
     }
     return worker
   }

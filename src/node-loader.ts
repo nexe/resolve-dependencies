@@ -6,7 +6,6 @@ import { join, sep, normalize, dirname, extname } from 'path'
 import { gatherDependencies } from './gather-deps'
 import { File, isScript, createFile, isNodeModule, ensureDottedRelative } from './file'
 import { ResolverFactory, CachedInputFileSystem, NodeJsInputFileSystem } from 'enhanced-resolve'
-import { createDeferred, createDeferredFactory } from '@calebboyd/semaphore'
 
 export type JsLoaderOptions = {
   loadContent: boolean
@@ -90,8 +89,8 @@ export async function load(wd: string, request: string, options = defaultOptions
       file.package = pkg
       file.deps[ensureDottedRelative(fileDir, pkgPath)] = null
       if (options.expand) {
-        const globs = await globby(file.package.files || moduleGlob, { cwd: pkgDir })
-        globs
+        const files = await globby(file.package.files || moduleGlob, { cwd: pkgDir })
+        files
           .map(dep => ensureDottedRelative(fileDir, join(pkgDir, dep)))
           .filter(relDep => file.absPath !== join(pkgDir, relDep))
           .forEach(relDep => {
