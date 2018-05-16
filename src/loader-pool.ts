@@ -64,7 +64,7 @@ export class Loader {
       args: [cd, request, this.workerOptions]
     })
     if ('warning' in file) {
-      console.log(file.warning) //FIXME
+      console.log(file.warning) //tslint:disable-line
       return null
     }
 

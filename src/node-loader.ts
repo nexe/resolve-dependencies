@@ -30,6 +30,26 @@ const nodeResolve = createResolver(),
   identity = <T>(x: T) => x,
   defaultOptions = { loadContent: true, expand: false }
 
+export function resolveSync(from: string, request: string) {
+  let result = {
+    absPath: '',
+    pkgPath: '',
+    pkg: null,
+    warning: ''
+  }
+  nodeResolve(from, request, {}, (err: Error | null, path: string, data: any) => {
+    if (err) {
+      result.warning = err.message
+      return
+    }
+    result.absPath = path
+    result.pkgPath = data.descriptionFilePath
+    result.pkg = data.descriptionFileData
+    return
+  })
+  return result
+}
+
 export function resolve(
   from: string,
   request: string

@@ -1,7 +1,7 @@
 import { Loader } from './loader-pool'
 import { File, FileMap } from './file'
 import { ResolveDepOptions, normalizeOptions } from './options'
-import { resolve as resolveFileName } from './node-loader'
+import { resolveSync as resolveFileNameSync } from './node-loader'
 
 import * as path from 'path'
 
@@ -23,4 +23,4 @@ export default async function resolve(...options: (Partial<ResolveDepOptions> | 
   loader.quit()
   return { files: opts.files, entries: entryMap }
 }
-export { resolve, resolveFileName }
+export { resolve, resolveFileNameSync }
