@@ -6,14 +6,15 @@ const cpus = require('os').cpus().length
 import { ResolveDepOptions } from './options'
 
 export class Loader {
-  private pool: WorkerThread[]
+  private pool: WorkerThread[] = []
+  private starting: WorkerThread[]
   private workerOptions: ResolveDepOptions
   private size = cpus - 1
   private currentWorker = 0
-  private initializing: Promise<any> | undefined
+  private initializing: Promise<undefined> | undefined
 
   constructor(private options: ResolveDepOptions) {
-    this.pool = [...Array(this.size)].map(x => new WorkerThread({ taskConccurency: 100 }))
+    this.starting = [...Array(this.size)].map(x => new WorkerThread({ taskConccurency: 100 }))
     this.workerOptions = { ...options, files: {} }
   }
 
@@ -21,15 +22,20 @@ export class Loader {
     if (this.initializing) {
       return this.initializing
     }
-    return (this.initializing = Promise.all(
-      this.pool.map(x =>
-        x.sendMessage({
-          modulePath: require.resolve('./node-loader'),
-          contextName: 'node-loader',
-          options: this.workerOptions
-        })
-      )
-    ))
+    //initailize all, but only wait for the first one
+    return (this.initializing = Promise.race(
+      this.starting.map(x => {
+        return x
+          .sendMessage({
+            modulePath: require.resolve('./node-loader'),
+            contextName: 'node-loader',
+            options: this.workerOptions
+          })
+          .then(() => {
+            this.pool.push(x)
+          })
+      })
+    ).then(() => undefined))
   }
 
   quit() {
@@ -37,6 +43,7 @@ export class Loader {
   }
 
   private getWorker() {
+    //todo wait for workers to warm up
     const worker = this.pool[this.currentWorker++]
     if (this.currentWorker === this.pool.length) {
       this.currentWorker = 0
@@ -44,11 +51,11 @@ export class Loader {
     return worker
   }
 
-  loadEntry(wd: string, request: string, files: FileMap = {}) {
+  loadEntry(wd: string, request: string, files: FileMap = {}, warnings = []) {
     const mainFile = ensureDottedRelative(wd, resolve(wd, request))
-    return this.load(wd, mainFile, files).then(
+    return this.load(wd, mainFile, files, warnings).then(
       entry => {
-        return { entry, files }
+        return { entry, files, warnings }
       },
       e => {
         throw e
@@ -56,7 +63,12 @@ export class Loader {
     )
   }
 
-  private async load(cd: string, request: string, files: FileMap = {}): Promise<File | null> {
+  private async load(
+    cd: string,
+    request: string,
+    files: FileMap = {},
+    warnings: string[]
+  ): Promise<File | null> {
     const worker = this.getWorker()
     const file = await worker.sendMessage({
       contextName: 'node-loader',
@@ -64,7 +76,7 @@ export class Loader {
       args: [cd, request, this.workerOptions]
     })
     if ('warning' in file) {
-      console.log(file.warning) //tslint:disable-line
+      warnings.push(file.warning)
       return null
     }
 
@@ -81,7 +93,7 @@ export class Loader {
         if (~builtins.indexOf(req)) {
           return (file.deps[req] = null as any)
         }
-        return this.load(fileDir, req, files).then(dep => {
+        return this.load(fileDir, req, files, warnings).then(dep => {
           file.deps[req] = dep
           if ((file.moduleRoot || file.belongsTo) && dep && !dep.moduleRoot) {
             const owner = file.moduleRoot ? file : file.belongsTo

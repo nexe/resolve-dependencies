@@ -1,7 +1,7 @@
 import * as path from 'path'
 import { expect } from 'chai'
 import { resolve } from '../lib/index'
-import { FileMap } from '../lib/file'
+import { FileMap, File } from '../lib/file'
 
 const Tacks = require('tacks'),
   file = Tacks.File,
@@ -13,6 +13,7 @@ describe('resolve-dependencies', () => {
   let extraFileNames: { [key: string]: string }
   let cwd: string
   let files: FileMap
+  let result: { entries: { [key: string]: File }; files: FileMap; warnings: string[] }
 
   describe('resolve - gathers all dependencies', () => {
     before(async () => {
@@ -74,7 +75,8 @@ describe('resolve-dependencies', () => {
         'd-lib-something.js': path.resolve(cwd, 'node_modules/package-d/lib/something.js')
       }
       fixture.create(cwd)
-      files = (await resolve('./app.js', { cwd })).files
+      result = await resolve('./app.js', { cwd })
+      files = result.files
     })
 
     after(() => {
@@ -94,7 +96,8 @@ describe('resolve-dependencies', () => {
     })
 
     it('should resolve *all* package files when expand: true', async () => {
-      files = (await resolve('./app.js', { cwd, expand: true })).files
+      result = await resolve('./app.js', { cwd, expand: true })
+      files = result.files
       Object.keys(extraFileNames).forEach(x => {
         expect(files[extraFileNames[x]], x).not.to.be.undefined
       })
@@ -102,6 +105,10 @@ describe('resolve-dependencies', () => {
         expect(files[strictFileNames[x]], x).not.to.be.undefined
       })
       expect(Object.keys(files)).to.have.lengthOf(12)
+    })
+
+    it('should produce warnings for un-resolvable requests', () => {
+      expect(result.warnings).to.have.lengthOf(2)
     })
   })
 })

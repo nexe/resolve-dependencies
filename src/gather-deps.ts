@@ -1,4 +1,4 @@
-import { parseScript, parseModule } from 'cherow'
+import { parse } from 'cherow'
 import { isScript } from './file'
 
 function isNodeAString(node: any) {
@@ -48,11 +48,18 @@ export function gatherDependencies(code: string) {
       if (node.type === 'ImportDeclaration' && isNodeAString(node.source)) {
         result.deps[node.source.value] = null
       }
-    },
-    options = { node: true, next: true, globalReturn: true, skipShebang: true },
-    ast = isScript(code) ? parseScript(code, options) : parseModule(code, options)
+    }
 
-  walk(ast, visit)
+  walk(
+    parse(code, {
+      node: true,
+      next: true,
+      globalReturn: true,
+      skipShebang: true,
+      module: !isScript(code)
+    }),
+    visit
+  )
 
   return result
 }
