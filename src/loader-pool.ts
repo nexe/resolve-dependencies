@@ -8,6 +8,7 @@ import { ResolveDepOptions } from './options'
 export class Loader {
   private pool: WorkerThread[] = []
   private starting: WorkerThread[]
+  private ended: boolean = false
   private workerOptions: ResolveDepOptions
   private size = cpus - 1
   private currentWorker = 0
@@ -22,6 +23,7 @@ export class Loader {
     if (this.initializing) {
       return this.initializing
     }
+    this.ended = false
     //initailize all, but only wait for the first one
     return (this.initializing = Promise.race(
       this.starting.map(x => {
@@ -32,6 +34,9 @@ export class Loader {
             options: this.workerOptions
           })
           .then(() => {
+            if (this.ended) {
+              x.end()
+            }
             this.pool.push(x)
           })
       })
@@ -39,6 +44,7 @@ export class Loader {
   }
 
   quit() {
+    this.ended = true
     this.pool.forEach(x => x.end())
   }
 
