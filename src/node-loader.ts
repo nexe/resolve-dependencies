@@ -27,7 +27,6 @@ function createResolver(useSyncFileSystemCalls = true) {
 const nodeResolve = createResolver(),
   asyncNodeResolve = createResolver(false),
   moduleGlob = ['**/*', '!node_modules', '!test'],
-  identity = <T>(x: T) => x,
   defaultOptions = { loadContent: true, expand: false }
 
 export function resolveSync(from: string, request: string) {
@@ -130,6 +129,5 @@ export async function load(wd: string, request: string, options = defaultOptions
   if (!options.loadContent) {
     file.contents = null
   }
-
   return file
 }

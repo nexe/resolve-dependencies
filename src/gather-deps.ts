@@ -1,4 +1,4 @@
-import { parse } from 'cherow'
+import { parse } from 'acorn'
 import { isScript } from './file'
 
 function isNodeAString(node: any) {
@@ -52,11 +52,12 @@ export function gatherDependencies(code: string) {
 
   walk(
     parse(code, {
-      node: true,
-      next: true,
-      globalReturn: true,
-      skipShebang: true,
-      module: !isScript(code)
+      ecmaVersion: 10,
+      allowReserved: true,
+      allowHashBang: true,
+      allowImportExportEverywhere: true,
+      allowReturnOutsideFunction: true,
+      sourceType: isScript(code) ? 'script' : 'module'
     }),
     visit
   )
