@@ -1,6 +1,6 @@
 {
   "name": "resolve-dependencies",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Resolve an entrypoint's dependencies",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
@@ -43,7 +43,7 @@
     "@calebboyd/semaphore": "^1.3.1",
     "acorn": "^6.0.4",
     "enhanced-resolve": "^4.1.0",
-    "globby": "^8.0.1",
+    "globby": "git://github.com/nexe/globby.git#de057b69c2bca74391bfd913ed0145ce4e42563a",
     "pify": "^4.0.0"
   }
 }
