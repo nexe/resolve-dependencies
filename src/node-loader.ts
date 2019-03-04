@@ -1,5 +1,5 @@
 import { readFile as fsReadFile } from 'fs'
-import globby = require('globby')
+import globby from 'globby'
 import pify = require('pify')
 const readFile = pify(fsReadFile)
 import { join, sep, normalize, dirname, extname } from 'path'
