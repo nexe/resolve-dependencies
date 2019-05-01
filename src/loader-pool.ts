@@ -10,7 +10,7 @@ export class Loader {
   private starting: WorkerThread[]
   private ended: boolean = false
   private workerOptions: ResolveDepOptions
-  private size = cpus - 1
+  private size = Math.max(cpus - 1, 1)
   private currentWorker = 0
   private initializing: Promise<undefined> | undefined
 
