@@ -1,14 +1,12 @@
 import { Loader } from './loader-pool'
-import { File, FileMap } from './file'
+import { File } from './file'
 import { ResolveDepOptions, normalizeOptions } from './options'
-import { resolveSync as resolveFileNameSync } from './node-loader'
-
-import * as path from 'path'
+import { resolveSync } from './node-loader'
 
 export default async function resolve(...options: (Partial<ResolveDepOptions> | string)[]) {
   const opts = normalizeOptions(options),
     loader = new Loader(opts)
-  await loader.initialize()
+  await loader.setup()
 
   const res = await Promise.all(
       opts.entries.map(request => loader.loadEntry(opts.cwd, request, opts.files))
@@ -25,4 +23,4 @@ export default async function resolve(...options: (Partial<ResolveDepOptions> | 
   loader.quit()
   return { files: opts.files, entries: entryMap, warnings }
 }
-export { resolve, resolveFileNameSync }
+export { resolve, resolveSync }

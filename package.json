@@ -1,9 +1,9 @@
 {
   "name": "resolve-dependencies",
-  "version": "2.2.3",
+  "version": "3.0.0",
   "description": "Resolve an entrypoint's dependencies",
-  "main": "lib/index.js",
-  "typings": "lib/index.d.ts",
+  "main": "lib/resolve.js",
+  "typings": "lib/resolve.d.ts",
   "files": [
     "lib"
   ],
@@ -21,28 +21,29 @@
   "author": "Caleb Boyd <caleb.boyd@hotmail.com>",
   "license": "MIT",
   "devDependencies": {
-    "@types/chai": "^4.1.4",
+    "@types/chai": "^4.1.7",
     "@types/enhanced-resolve": "^3.0.6",
-    "@types/mocha": "^5.2.5",
-    "@types/node": "^10.5.8",
+    "@types/mocha": "^5.2.7",
+    "@types/node": "^12.6.8",
     "@types/pify": "^3.0.2",
-    "chai": "^4.1.2",
+    "chai": "^4.2.0",
     "mkdirp": "^0.5.1",
-    "mocha": "^5.2.0",
-    "prettier": "^1.14.2",
-    "rimraf": "^2.6.2",
-    "tacks": "^1.2.7",
-    "ts-node": "^7.0.1",
-    "tslint": "^5.11.0",
-    "tslint-config-prettier": "^1.14.0",
-    "tslint-plugin-prettier": "^1.3.0",
-    "typescript": "^3.0.1"
+    "mocha": "^6.2.0",
+    "prettier": "^1.18.2",
+    "rimraf": "^2.6.3",
+    "tacks": "^1.3.0",
+    "ts-node": "^8.3.0",
+    "tslint": "^5.18.0",
+    "tslint-config-prettier": "^1.18.0",
+    "tslint-plugin-prettier": "^2.0.1",
+    "typescript": "^3.5.3"
   },
   "dependencies": {
     "@calebboyd/semaphore": "^1.3.1",
-    "acorn": "^6.0.4",
     "enhanced-resolve": "^4.1.0",
-    "globby": "^9.1.0",
-    "pify": "^4.0.0"
+    "globby": "^10.0.1",
+    "json-stringify-safe": "^5.0.1",
+    "meriyah": "^1.4.7",
+    "pify": "^4.0.1"
   }
 }

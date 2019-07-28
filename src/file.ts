@@ -6,12 +6,25 @@ export function isScript(code: string) {
   return !Boolean(code.match(esmRegex))
 }
 
+export type JsLoaderOptions = {
+  loadContent: boolean
+  isEntry: boolean
+  context?: {
+    moduleRoot: string
+    package: any
+    expanded?: boolean
+    globs?: string[]
+  }
+  expand: boolean | string
+}
+
 export type FileMap = { [key: string]: File | null }
 export interface File {
   deps: FileMap
   belongsTo?: File
   absPath: string
   contents: string | null
+  contextExpanded?: boolean
   variableImports?: boolean
   moduleRoot?: string
   package?: any

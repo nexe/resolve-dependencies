@@ -4,6 +4,23 @@ Given an entrypoint, get a map of files, with their contents, description and de
 
 File processing occurs concurrently in (CPUs - 1) child processes.
 
+### `Options`
+
+A string:
+- an entrypoint to begin traversal from
+
+An object:
+- `entries`:  string[]                              - a list of entrypoints to traverse, resolved against cwd
+- `cwd`:      string                                - the base directory that the resolution occurs from
+- `loadContent`: boolean                            - indicates that the content should be included int he FileMap (this may be unreasonable for large dependency trees)
+- `files`: ({ [key: string]: File | null })[]       - a cache of already resolved files
+- `expand`: 
+
+Strings and Objects
+- Strings are treated as entries
+- Objects are merged
+
+
 ```javascript
 import { resolve } from 'resolve-dependencies'
 

@@ -1,33 +1,29 @@
 import { readFile as fsReadFile } from 'fs'
-import globby from 'globby'
+import * as globby from 'globby'
 import pify = require('pify')
-const readFile = pify(fsReadFile)
-import { join, sep, normalize, dirname, extname } from 'path'
+import { join, dirname } from 'path'
 import { gatherDependencies } from './gather-deps'
-import { File, isScript, createFile, isNodeModule, ensureDottedRelative } from './file'
+import { File, createFile, isNodeModule, ensureDottedRelative, JsLoaderOptions } from './file'
 import { ResolverFactory, CachedInputFileSystem, NodeJsInputFileSystem } from 'enhanced-resolve'
 
-export type JsLoaderOptions = {
-  loadContent: boolean
-  expand: boolean
+const readFile = pify(fsReadFile)
+
+interface Resolver {
+  resolve: (context: any, path: string, request: string, resolveContext: any, callback: any) => void
 }
 
-function createResolver(useSyncFileSystemCalls = true) {
-  const resolver = ResolverFactory.createResolver({
+const fileSystem = new CachedInputFileSystem(new NodeJsInputFileSystem(), 4000) as any,
+  resolver = ResolverFactory.createResolver({
+    extensions: ['.js', '.json', '.node'],
+    fileSystem: new CachedInputFileSystem(new NodeJsInputFileSystem(), 4000) as any
+  }) as Resolver,
+  syncResolver = ResolverFactory.createResolver({
     extensions: ['.js', '.json', '.node'],
     useSyncFileSystemCalls: true,
-    fileSystem: new CachedInputFileSystem(new NodeJsInputFileSystem(), 4000)
-  } as any)
-
-  return resolver.resolve.bind(resolver, {
-    environments: ['node+es3+es5+process+native']
-  })
-}
-
-const nodeResolve = createResolver(),
-  asyncNodeResolve = createResolver(false),
+    fileSystem
+  }) as Resolver,
   moduleGlob = ['**/*', '!node_modules', '!test'],
-  defaultOptions = { loadContent: true, expand: false }
+  defaultOptions: JsLoaderOptions = { loadContent: true, expand: false, isEntry: false }
 
 export function resolveSync(from: string, request: string) {
   let result = {
@@ -36,7 +32,7 @@ export function resolveSync(from: string, request: string) {
     pkg: null,
     warning: ''
   }
-  nodeResolve(from, request, {}, (err: Error | null, path: string, data: any) => {
+  syncResolver.resolve({}, from, request, {}, (err: Error | null, path: string, data: any) => {
     if (err) {
       result.warning = err.message
       return
@@ -65,7 +61,7 @@ export function resolve(
     warning: ''
   }
   return new Promise((resolve, reject) => {
-    asyncNodeResolve(from, request, {}, (err: Error | null, path: string, data: any) => {
+    resolver.resolve({}, from, request, {}, (err: Error | null, path: string, data: any) => {
       if (err) {
         result.warning = err.message
         return resolve(result)
@@ -78,22 +74,41 @@ export function resolve(
   })
 }
 
-export async function load(wd: string, request: string, options = defaultOptions) {
-  let { absPath, pkg, pkgPath, warning } = await resolve(wd, request)
+async function expand(file: File, fileDir: string, baseDir: string, globs?: string[] | string) {
+  const files = await globby(globs || moduleGlob, { cwd: baseDir })
+  files
+    .map(dep => ensureDottedRelative(fileDir, join(baseDir, dep)))
+    .filter(relDep => file.absPath !== join(baseDir, relDep))
+    .forEach(relDep => {
+      file.deps[relDep] = file.deps[relDep] || null
+    })
+  const currentDeps = Object.keys(file.deps)
+  file.package &&
+    file.package.dependencies &&
+    Object.keys(file.package.dependencies || {}).forEach(dependency => {
+      if (!currentDeps.some(curDep => curDep.startsWith(dependency))) {
+        file.deps[dependency] = file.deps[dependency] || null
+      }
+    })
+}
+
+export async function load(workingDirectory: string, request: string, options = defaultOptions) {
+  let { absPath, pkg, pkgPath, warning } = await resolve(workingDirectory, request)
   if (!absPath) {
     return { warning: warning }
   }
-  const file = createFile(absPath)
-  const isJs = absPath.endsWith('.js')
+  const file = createFile(absPath),
+    isJs = absPath.endsWith('.js') || absPath.endsWith('.mjs') || options.isEntry
 
   file.absPath = absPath
 
   if (isJs || absPath.endsWith('json')) {
     file.contents = await readFile(absPath, 'utf-8')
   }
+
   if (isJs) {
     try {
-      const parseResult = gatherDependencies(file.contents!)
+      const parseResult = gatherDependencies(file.contents!, absPath.endsWith('.mjs') || undefined)
       Object.assign(file.deps, parseResult.deps)
       file.variableImports = parseResult.variable
     } catch (e) {
@@ -101,29 +116,24 @@ export async function load(wd: string, request: string, options = defaultOptions
     }
   }
 
-  if (isNodeModule(request)) {
-    if (pkg && pkgPath) {
-      const pkgDir = (file.moduleRoot = dirname(pkgPath))
-      const fileDir = dirname(file.absPath)
-      file.package = pkg
-      file.deps[ensureDottedRelative(fileDir, pkgPath)] = null
-      if (options.expand) {
-        const files = await globby(file.package.files || moduleGlob, { cwd: pkgDir })
-        files
-          .map(dep => ensureDottedRelative(fileDir, join(pkgDir, dep)))
-          .filter(relDep => file.absPath !== join(pkgDir, relDep))
-          .forEach(relDep => {
-            file.deps[relDep] = file.deps[relDep] || null
-          })
-        const currentDeps = Object.keys(file.deps)
-        //when expand is set, include dependencies in the package.json that might be dynamically required
-        Object.keys(file.package.dependencies || {}).forEach(dependency => {
-          if (!currentDeps.some(curDep => curDep.startsWith(dependency))) {
-            file.deps[dependency] = file.deps[dependency] || null
-          }
-        })
-      }
+  const fileDir = dirname(file.absPath)
+
+  if (isNodeModule(request) && pkg && pkgPath) {
+    const pkgDir = (file.moduleRoot = dirname(pkgPath))
+    file.package = pkg
+    file.deps[ensureDottedRelative(fileDir, pkgPath)] = null
+    if (options.expand === 'all' || (options.expand === 'variable' && file.variableImports)) {
+      await expand(file, fileDir, pkgDir, file.package.files)
+      file.contextExpanded = true
     }
+  } else if (
+    options.expand === 'variable' &&
+    file.variableImports &&
+    options.context &&
+    !options.context.expanded
+  ) {
+    await expand(file, fileDir, options.context.moduleRoot, options.context.globs)
+    file.contextExpanded = true
   }
 
   if (!options.loadContent) {

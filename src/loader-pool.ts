@@ -1,16 +1,18 @@
-import { File, FileMap, isNodeModule, ensureDottedRelative } from './file'
+import { File, FileMap, ensureDottedRelative, JsLoaderOptions } from './file'
 import { resolve, dirname } from 'path'
 import { WorkerThread } from './worker'
 import builtins from './node-builtins'
-const cpus = require('os').cpus().length
+import { cpus } from 'os'
 import { ResolveDepOptions } from './options'
+
+type context = Pick<JsLoaderOptions, 'context'>['context']
 
 export class Loader {
   private pool: WorkerThread[] = []
   private starting: WorkerThread[]
   private ended: boolean = false
   private workerOptions: ResolveDepOptions
-  private size = Math.max(cpus - 1, 1)
+  private size = cpus().length - 1 || 1
   private currentWorker = 0
   private initializing: Promise<undefined> | undefined
 
@@ -19,11 +21,12 @@ export class Loader {
     this.workerOptions = { ...options, files: {} }
   }
 
-  initialize() {
+  setup() {
     if (this.initializing) {
       return this.initializing
     }
     this.ended = false
+
     //initailize all, but only wait for the first one
     return (this.initializing = Promise.race(
       this.starting.map(x => {
@@ -57,9 +60,9 @@ export class Loader {
     return worker
   }
 
-  loadEntry(wd: string, request: string, files: FileMap = {}, warnings = []) {
-    const mainFile = ensureDottedRelative(wd, resolve(wd, request))
-    return this.load(wd, mainFile, files, warnings).then(
+  loadEntry(workingDirectory: string, request: string, files: FileMap = {}, warnings = []) {
+    const mainFile = ensureDottedRelative(workingDirectory, resolve(workingDirectory, request))
+    return this.load(workingDirectory, mainFile, files, warnings).then(
       entry => {
         return { entry, files, warnings }
       },
@@ -73,13 +76,22 @@ export class Loader {
     cd: string,
     request: string,
     files: FileMap = {},
-    warnings: string[]
+    warnings: string[],
+    context?: any
   ): Promise<File | null> {
     const worker = this.getWorker()
+
+    let options = {}
+    if (context) {
+      Object.assign(options, this.workerOptions, { context })
+    } else {
+      Object.assign(options, this.workerOptions)
+    }
+
     const file = await worker.sendMessage({
       contextName: 'node-loader',
       method: 'load',
-      args: [cd, request, this.workerOptions]
+      args: [cd, request, options]
     })
     if ('warning' in file) {
       warnings.push(file.warning)
@@ -92,14 +104,29 @@ export class Loader {
       files[file.absPath] = file
     }
 
+    let packageGlobs: string[] | undefined = undefined
+    if (file.moduleRoot && file.package && file.package.files) {
+      packageGlobs = file.package.files
+    }
+
+    if (!packageGlobs && file.belongsTo && file.belongsTo.package && file.belongsTo.package.files) {
+      packageGlobs = file.belongsTo.package.files
+    }
+
     const fileDir = dirname(file.absPath)
+    const ctx = {
+      moduleRoot: file.moduleRoot || undefined,
+      package: file.package,
+      expanded: Boolean(file.contextExpanded),
+      globs: packageGlobs
+    }
 
     await Promise.all(
       Object.keys(file.deps).map(req => {
         if (~builtins.indexOf(req)) {
           return (file.deps[req] = null as any)
         }
-        return this.load(fileDir, req, files, warnings).then(dep => {
+        return this.load(fileDir, req, files, warnings, ctx).then(dep => {
           file.deps[req] = dep
           if ((file.moduleRoot || file.belongsTo) && dep && !dep.moduleRoot) {
             const owner = file.moduleRoot ? file : file.belongsTo

@@ -1,4 +1,4 @@
-import { parse } from 'acorn'
+import { parse } from 'meriyah'
 import { isScript } from './file'
 
 function isNodeAString(node: any) {
@@ -31,13 +31,16 @@ function walk(node: any, visit: Function): void {
   }
 }
 
-export function gatherDependencies(code: string) {
+export function gatherDependencies(code: string, isModule?: boolean) {
   const result: { variable: boolean; deps: { [key: string]: any } } = {
       variable: false,
       deps: {}
     },
     visit = (node: any) => {
-      if (node.type === 'CallExpression' && (isRequire(node) || isImport(node))) {
+      if (
+        node.type === 'CallExpression' &&
+        (isRequire(node) || isImport(node) || node.type === 'ImportExpression')
+      ) {
         const request = node.arguments[0]
         if (isNodeAString(request)) {
           result.deps[request.value] = null
@@ -52,12 +55,10 @@ export function gatherDependencies(code: string) {
 
   walk(
     parse(code, {
-      ecmaVersion: 10,
-      allowReserved: true,
-      allowHashBang: true,
-      allowImportExportEverywhere: true,
-      allowReturnOutsideFunction: true,
-      sourceType: isScript(code) ? 'script' : 'module'
+      globalReturn: true,
+      next: true,
+      module: isModule || isScript(code),
+      specDeviation: true
     }),
     visit
   )

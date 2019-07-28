@@ -1,6 +1,6 @@
 import * as path from 'path'
 import { expect } from 'chai'
-import { resolve } from '../lib/index'
+import { resolve } from '../lib/resolve'
 import { FileMap, File } from '../lib/file'
 
 const Tacks = require('tacks'),
@@ -9,8 +9,10 @@ const Tacks = require('tacks'),
 
 describe('resolve-dependencies', () => {
   let fixture: any
-  let strictFileNames: { [key: string]: string }
-  let extraFileNames: { [key: string]: string }
+  let referencedFiles: { [key: string]: string }
+  let unreferencedFiles: { [key: string]: string }
+  let noRefCount = 0
+  let varRefCount = 0
   let cwd: string
   let files: FileMap
   let result: { entries: { [key: string]: File }; files: FileMap; warnings: string[] }
@@ -48,32 +50,44 @@ describe('resolve-dependencies', () => {
             'package-d': dir({
               lib: dir({
                 'index.js': file(
-                  `module.exports = "wat"; require('missing'); require('./more-missing');`
+                  `module.exports = "wat"; require('missing'); require('./more-missing'); require('package-e')`
                 ),
                 'something.js': file('module.exports = 123')
               }),
               'package.json': file({ name: 'package-c', main: 'lib/index.js' })
+            }),
+            'package-e': dir({
+              'b.js': file('console.log("wat")'),
+              'a.js': file('var mod = "./b.js"; require(mod)'),
+              'entry.js': file('require("./a.js")'),
+              'package.json': file({ name: 'package-e', main: 'entry.js' })
             })
           })
         })
       )
       cwd = path.resolve(__dirname, 'fixture-a')
-      strictFileNames = {
+      referencedFiles = {
         'app.js': path.resolve(cwd, 'app.js'),
-        'b-index.js': path.resolve(cwd, 'node_modules/package-b/index.js'),
         'a-main.js': path.resolve(cwd, 'node_modules/package-a/main.js'),
-        'c-a.json': path.resolve(cwd, 'node_modules/package-c/a.json'),
-        'd-lib-index.js': path.resolve(cwd, 'node_modules/package-d/lib/index.js'),
         'a-package.json': path.resolve(cwd, 'node_modules/package-a/package.json'),
+        'd-lib-index.js': path.resolve(cwd, 'node_modules/package-d/lib/index.js'),
+        'd-package.json': path.resolve(cwd, 'node_modules/package-d/package.json'),
+        'b-index.js': path.resolve(cwd, 'node_modules/package-b/index.js'),
         'b-package.json': path.resolve(cwd, 'node_modules/package-b/package.json'),
+        'c-a.json': path.resolve(cwd, 'node_modules/package-c/a.json'),
         'c-package.json': path.resolve(cwd, 'node_modules/package-c/package.json'),
-        'd-package.json': path.resolve(cwd, 'node_modules/package-d/package.json')
+        'e-entry.js': path.resolve(cwd, 'node_modules/package-e/entry.js'),
+        'e-a.js': path.resolve(cwd, 'node_modules/package-e/a.js'),
+        'e-package.json': path.resolve(cwd, 'node_modules/package-e/package.json')
       }
-      extraFileNames = {
-        'random-file.txt': path.resolve(cwd, 'node_modules/package-a/random-file.txt'),
-        'random-file.json': path.resolve(cwd, 'node_modules/package-a/random-file.json'),
-        'd-lib-something.js': path.resolve(cwd, 'node_modules/package-d/lib/something.js')
+      unreferencedFiles = {
+        'e-variable-ref-b.js': path.resolve(cwd, 'node_modules/package-e/b.js'),
+        'a-no-ref-random-file.txt': path.resolve(cwd, 'node_modules/package-a/random-file.txt'),
+        'a-no-ref-random-file.json': path.resolve(cwd, 'node_modules/package-a/random-file.json'),
+        'd-no-ref-something.js': path.resolve(cwd, 'node_modules/package-d/lib/something.js')
       }
+      varRefCount = 1
+      noRefCount = 3
       fixture.create(cwd)
       result = await resolve('./app.js', { cwd })
       files = result.files
@@ -84,27 +98,55 @@ describe('resolve-dependencies', () => {
     })
 
     it('should resolve all files from an entry', async () => {
-      Object.keys(strictFileNames).forEach(x => {
-        expect(files[strictFileNames[x]], x).not.to.be.undefined
+      const fileNames = Object.keys(referencedFiles)
+      fileNames.forEach(x => {
+        expect(files[referencedFiles[x]], x).not.to.be.undefined
       })
-      expect(Object.keys(files)).to.have.lengthOf(9)
+      expect(Object.keys(files)).to.have.lengthOf(fileNames.length)
     })
 
     it('should not resolve node builtins', async () => {
-      const name = strictFileNames['a-main.js']
+      const name = referencedFiles['a-main.js']
       expect(files[name]!.deps['path']).to.equal(null)
     })
 
-    it('should resolve *all* package files when expand: true', async () => {
-      result = await resolve('./app.js', { cwd, expand: true })
+    it('should resolve *all* package files when expand: all', async () => {
+      result = await resolve('./app.js', { cwd, expand: 'all' })
       files = result.files
-      Object.keys(extraFileNames).forEach(x => {
-        expect(files[extraFileNames[x]], x).not.to.be.undefined
+
+      const unreferencedFileNames = Object.keys(unreferencedFiles),
+        referencedFileNames = Object.keys(referencedFiles)
+
+      unreferencedFileNames.forEach(x => {
+        expect(files[unreferencedFiles[x]], x).not.to.be.undefined
       })
-      Object.keys(strictFileNames).forEach(x => {
-        expect(files[strictFileNames[x]], x).not.to.be.undefined
+      referencedFileNames.forEach(x => {
+        expect(files[referencedFiles[x]], x).not.to.be.undefined
       })
-      expect(Object.keys(files)).to.have.lengthOf(12)
+      expect(Object.keys(files)).to.have.lengthOf(
+        unreferencedFileNames.length + referencedFileNames.length
+      )
+    })
+
+    it('should resolve *most* package files when expand: variable', async () => {
+      result = await resolve('./app.js', { cwd, expand: 'variable' })
+      files = result.files
+
+      const unreferencedFileNames = Object.keys(unreferencedFiles),
+        referencedFileNames = Object.keys(referencedFiles)
+      unreferencedFileNames
+        .filter(key => {
+          key !== 'random-file.txt' && key !== 'random-file.json'
+        })
+        .forEach(x => {
+          expect(files[unreferencedFiles[x]], x).not.to.be.undefined
+        })
+      referencedFileNames.forEach(x => {
+        expect(files[referencedFiles[x]], x).not.to.be.undefined
+      })
+      expect(Object.keys(files)).to.have.lengthOf(
+        unreferencedFileNames.length + referencedFileNames.length - noRefCount
+      )
     })
 
     it('should produce warnings for un-resolvable requests', () => {
