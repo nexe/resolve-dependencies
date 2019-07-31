@@ -15,7 +15,7 @@ export type JsLoaderOptions = {
     expanded?: boolean
     globs?: string[]
   }
-  expand: boolean | string
+  expand: 'all' | 'variable' | 'none'
 }
 
 export type FileMap = { [key: string]: File | null }

@@ -1,6 +1,6 @@
 {
   "name": "resolve-dependencies",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Resolve an entrypoint's dependencies",
   "main": "lib/resolve.js",
   "typings": "lib/resolve.d.ts",
@@ -43,7 +43,7 @@
     "enhanced-resolve": "^4.1.0",
     "globby": "^10.0.1",
     "json-stringify-safe": "^5.0.1",
-    "meriyah": "^1.4.7",
+    "meriyah": "^1.5.0",
     "pify": "^4.0.1"
   }
 }

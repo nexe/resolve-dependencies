@@ -23,7 +23,7 @@ const fileSystem = new CachedInputFileSystem(new NodeJsInputFileSystem(), 4000) 
     fileSystem
   }) as Resolver,
   moduleGlob = ['**/*', '!node_modules', '!test'],
-  defaultOptions: JsLoaderOptions = { loadContent: true, expand: false, isEntry: false }
+  defaultOptions: JsLoaderOptions = { loadContent: true, expand: 'none', isEntry: false }
 
 export function resolveSync(from: string, request: string) {
   let result = {

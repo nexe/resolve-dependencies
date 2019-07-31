@@ -1,6 +1,6 @@
 import { FileMap } from './file'
 
-type Expansion = 'all' | 'variable' | 'strict'
+type Expansion = 'all' | 'variable' | 'none'
 
 export type ResolveDepOptions = {
   entries: string[]
@@ -15,7 +15,7 @@ export function normalizeOptions(args: Partial<ResolveDepOptions | string>[]): R
     entries: [] as string[],
     cwd: process.cwd(),
     loadContent: true,
-    expand: 'strict' as Expansion,
+    expand: 'none' as Expansion,
     files: {} as FileMap
   }
 
@@ -23,7 +23,7 @@ export function normalizeOptions(args: Partial<ResolveDepOptions | string>[]): R
     if (typeof x === 'string') return options.entries.push(x)
     if (x.cwd) options.cwd = x.cwd
     if (Array.isArray(x.entries)) options.entries.push(...x.entries)
-    if ('expand' in x) options.expand = x.expand || 'strict'
+    if ('expand' in x) options.expand = x.expand || 'none'
     if ('loadContent' in x) options.loadContent = Boolean(x.loadContent)
     if ('files' in x) Object.assign(options.files, x.files)
   })

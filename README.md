@@ -14,7 +14,7 @@ An object:
 - `cwd`:      string                                - the base directory that the resolution occurs from
 - `loadContent`: boolean                            - indicates that the content should be included int he FileMap (this may be unreasonable for large dependency trees)
 - `files`: ({ [key: string]: File | null })[]       - a cache of already resolved files
-- `expand`: 
+- `expand`: 'all' | 'none' | 'variable'             - how module contexts should be expanded to include extra files
 
 Strings and Objects
 - Strings are treated as entries
