@@ -1,6 +1,6 @@
 {
   "name": "resolve-dependencies",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "description": "Resolve an entrypoint's dependencies",
   "main": "lib/resolve.js",
   "typings": "lib/resolve.d.ts",

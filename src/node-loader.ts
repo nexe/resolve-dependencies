@@ -130,6 +130,7 @@ export async function load(workingDirectory: string, request: string, options = 
     options.expand === 'variable' &&
     file.variableImports &&
     options.context &&
+    options.context.moduleRoot &&
     !options.context.expanded
   ) {
     await expand(file, fileDir, options.context.moduleRoot, options.context.globs)

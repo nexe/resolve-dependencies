@@ -115,7 +115,7 @@ export class Loader {
 
     const fileDir = dirname(file.absPath)
     const ctx = {
-      moduleRoot: file.moduleRoot || undefined,
+      moduleRoot: file.moduleRoot || (file.belongsTo && file.belongsTo.moduleRoot) || undefined,
       package: file.package,
       expanded: Boolean(file.contextExpanded),
       globs: packageGlobs
