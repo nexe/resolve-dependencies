@@ -12,7 +12,7 @@ export class Loader {
   private starting: WorkerThread[]
   private ended: boolean = false
   private workerOptions: ResolveDepOptions
-  private size = cpus().length - 1 || 1
+  private size = Number(process.env.RESOLVE_DEPENDENCIES_CPUS) || cpus().length - 1 || 1
   private currentWorker = 0
   private initializing: Promise<undefined> | undefined
 
