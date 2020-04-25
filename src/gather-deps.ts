@@ -19,7 +19,7 @@ function walk(node: any, visit: Function): void {
   }
   visit(node)
   node._visited = true
-  for (let childNode in node) {
+  for (const childNode in node) {
     const child = node[childNode]
     if (Array.isArray(child)) {
       for (let i = 0; i < child.length; i++) {
@@ -34,13 +34,10 @@ function walk(node: any, visit: Function): void {
 export function gatherDependencies(code: string, isModule?: boolean) {
   const result: { variable: boolean; deps: { [key: string]: any } } = {
       variable: false,
-      deps: {}
+      deps: {},
     },
     visit = (node: any) => {
-      if (
-        node.type === 'CallExpression' &&
-        (isRequire(node) || isImport(node) || node.type === 'ImportExpression')
-      ) {
+      if (node.type === 'CallExpression' && (isRequire(node) || isImport(node) || node.type === 'ImportExpression')) {
         const request = node.arguments[0]
         if (isNodeAString(request)) {
           result.deps[request.value] = null
@@ -58,7 +55,7 @@ export function gatherDependencies(code: string, isModule?: boolean) {
       globalReturn: true,
       next: true,
       module: isModule || isScript(code),
-      specDeviation: true
+      specDeviation: true,
     }),
     visit
   )

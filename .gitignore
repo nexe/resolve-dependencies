@@ -1,6 +1,4 @@
-node_modules
-*.log
-.idea
-lib
 .DS_Store
-test/fixture*
+node_modules
+dist
+lib

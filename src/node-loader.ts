@@ -1,12 +1,11 @@
-import { readFile as fsReadFile } from 'fs'
-import * as globby from 'globby'
-import pify = require('pify')
+import { promises } from 'fs'
+import globby from 'globby'
 import { join, dirname } from 'path'
 import { gatherDependencies } from './gather-deps'
 import { File, createFile, isNodeModule, ensureDottedRelative, JsLoaderOptions } from './file'
 import { ResolverFactory, CachedInputFileSystem, NodeJsInputFileSystem } from 'enhanced-resolve'
 
-const readFile = pify(fsReadFile)
+const readFile = promises.readFile
 
 interface Resolver {
   resolve: (context: any, path: string, request: string, resolveContext: any, callback: any) => void
@@ -15,22 +14,22 @@ interface Resolver {
 const fileSystem = new CachedInputFileSystem(new NodeJsInputFileSystem(), 4000) as any,
   resolver = ResolverFactory.createResolver({
     extensions: ['.js', '.json', '.node'],
-    fileSystem: new CachedInputFileSystem(new NodeJsInputFileSystem(), 4000) as any
+    fileSystem: new CachedInputFileSystem(new NodeJsInputFileSystem(), 4000) as any,
   }) as Resolver,
   syncResolver = ResolverFactory.createResolver({
     extensions: ['.js', '.json', '.node'],
     useSyncFileSystemCalls: true,
-    fileSystem
+    fileSystem,
   }) as Resolver,
   moduleGlob = ['**/*', '!node_modules', '!test'],
   defaultOptions: JsLoaderOptions = { loadContent: true, expand: 'none', isEntry: false }
 
 export function resolveSync(from: string, request: string) {
-  let result = {
+  const result = {
     absPath: '',
     pkgPath: '',
     pkg: null,
-    warning: ''
+    warning: '',
   }
   syncResolver.resolve({}, from, request, {}, (err: Error | null, path: string, data: any) => {
     if (err) {
@@ -54,11 +53,11 @@ export function resolve(
   pkg: any
   warning: string
 }> {
-  let result = {
+  const result = {
     absPath: '',
     pkgPath: '',
     pkg: null,
-    warning: ''
+    warning: '',
   }
   return new Promise((resolve, reject) => {
     resolver.resolve({}, from, request, {}, (err: Error | null, path: string, data: any) => {
@@ -77,23 +76,23 @@ export function resolve(
 async function expand(file: File, fileDir: string, baseDir: string, globs?: string[] | string) {
   const files = await globby(globs || moduleGlob, { cwd: baseDir })
   files
-    .map(dep => ensureDottedRelative(fileDir, join(baseDir, dep)))
-    .filter(relDep => file.absPath !== join(baseDir, relDep))
-    .forEach(relDep => {
+    .map((dep) => ensureDottedRelative(fileDir, join(baseDir, dep)))
+    .filter((relDep) => file.absPath !== join(baseDir, relDep))
+    .forEach((relDep) => {
       file.deps[relDep] = file.deps[relDep] || null
     })
   const currentDeps = Object.keys(file.deps)
   file.package &&
     file.package.dependencies &&
-    Object.keys(file.package.dependencies || {}).forEach(dependency => {
-      if (!currentDeps.some(curDep => curDep.startsWith(dependency))) {
+    Object.keys(file.package.dependencies || {}).forEach((dependency) => {
+      if (!currentDeps.some((curDep) => curDep.startsWith(dependency))) {
         file.deps[dependency] = file.deps[dependency] || null
       }
     })
 }
 
 export async function load(workingDirectory: string, request: string, options = defaultOptions) {
-  let { absPath, pkg, pkgPath, warning } = await resolve(workingDirectory, request)
+  const { absPath, pkg, pkgPath, warning } = await resolve(workingDirectory, request)
   if (!absPath) {
     return { warning: warning }
   }

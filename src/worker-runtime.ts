@@ -14,7 +14,7 @@ if (process.send) {
         (x: any) => {
           send({ result: x, id })
         },
-        error => {
+        (error) => {
           send({ error: error.stack, id })
         }
       )
@@ -24,7 +24,7 @@ if (process.send) {
     if (!method || !ctx) {
       send({
         error: `Error: Could not find "${method}" in "${contextName}"`,
-        id
+        id,
       })
       return
     }
@@ -33,7 +33,7 @@ if (process.send) {
     let error = null
 
     try {
-      result = await Promise.resolve(ctx[method].apply(ctx, args))
+      result = await Promise.resolve(ctx[method].call(ctx, ...args))
     } catch (e) {
       error = e.stack
     }

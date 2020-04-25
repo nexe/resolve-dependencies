@@ -16,10 +16,10 @@ export function normalizeOptions(args: Partial<ResolveDepOptions | string>[]): R
     cwd: process.cwd(),
     loadContent: true,
     expand: 'none' as Expansion,
-    files: {} as FileMap
+    files: {} as FileMap,
   }
 
-  args.forEach(x => {
+  args.forEach((x) => {
     if (typeof x === 'string') return options.entries.push(x)
     if (x.cwd) options.cwd = x.cwd
     if (Array.isArray(x.entries)) options.entries.push(...x.entries)
