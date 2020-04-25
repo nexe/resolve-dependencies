@@ -8,18 +8,13 @@ export default async function resolve(...options: (Partial<ResolveDepOptions> | 
     loader = new Loader(opts)
   await loader.setup()
 
-  const res = await Promise.all(
-      opts.entries.map(request => loader.loadEntry(opts.cwd, request, opts.files))
-    ),
+  const res = await Promise.all(opts.entries.map((request) => loader.loadEntry(opts.cwd, request, opts.files))),
     warnings: string[] = [],
-    entryMap = opts.entries.reduce(
-      (entryMap, entry, i) => {
-        entryMap[entry] = res[i].entry!
-        warnings.push(...res[i].warnings)
-        return entryMap
-      },
-      {} as { [key: string]: File }
-    )
+    entryMap = opts.entries.reduce((entryMap, entry, i) => {
+      entryMap[entry] = res[i].entry!
+      warnings.push(...res[i].warnings)
+      return entryMap
+    }, {} as { [key: string]: File })
   loader.quit()
   return { files: opts.files, entries: entryMap, warnings }
 }

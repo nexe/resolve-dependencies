@@ -50,6 +50,6 @@ export function createFile(absPath: string): File {
     deps: {},
     absPath,
     contents: null,
-    variableImports
+    variableImports,
   }
 }

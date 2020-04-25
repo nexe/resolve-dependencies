@@ -1,49 +1,106 @@
 {
   "name": "resolve-dependencies",
-  "version": "3.0.3",
-  "description": "Resolve an entrypoint's dependencies",
-  "main": "lib/resolve.js",
-  "typings": "lib/resolve.d.ts",
-  "files": [
-    "lib"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/nexe/resolve-dependencies.git"
-  },
-  "scripts": {
-    "build": "rimraf lib && tsc --declaration",
-    "prepublishOnly": "npm run lint && npm run build",
-    "lint": "tslint \"{src,test}/**/*.ts\" --fix",
-    "pretest": "npm run build",
-    "test": "mocha"
-  },
-  "author": "Caleb Boyd <caleb.boyd@hotmail.com>",
+  "version": "0.0.1",
   "license": "MIT",
-  "devDependencies": {
-    "@types/chai": "^4.1.7",
-    "@types/enhanced-resolve": "^3.0.6",
-    "@types/mocha": "^5.2.7",
-    "@types/node": "^12.6.8",
-    "@types/pify": "^3.0.2",
-    "chai": "^4.2.0",
-    "mkdirp": "^0.5.1",
-    "mocha": "^6.2.0",
-    "prettier": "^1.18.2",
-    "rimraf": "^2.6.3",
-    "tacks": "^1.3.0",
-    "ts-node": "^8.3.0",
-    "tslint": "^5.18.0",
-    "tslint-config-prettier": "^1.18.0",
-    "tslint-plugin-prettier": "^2.0.1",
-    "typescript": "^3.5.3"
+  "main": "lib/resolve-dependencies",
+  "files": [
+    "lib",
+    "!**/*.spec.js"
+  ],
+  "scripts": {
+    "build": "rm -rf lib && npm run lint && tsc",
+    "commitlint": "commitlint -f $(git rev-list --tags --max-count=1) -t $(git log --pretty=%H | head -1)",
+    "lint": "eslint \"src/**/*\" --fix",
+    "prepublishOnly": "npm run build && npm run commitlint",
+    "test": "jest --passWithNoTests",
+    "watch": "npm run build && concurrently -k \"npm:watch:typescript\" \"npm:watch:test\" -c blue,green",
+    "watch:test": "jest --watchAll",
+    "watch:typescript": "tsc -w"
   },
   "dependencies": {
-    "@calebboyd/semaphore": "^1.3.1",
-    "enhanced-resolve": "^4.1.0",
-    "globby": "^10.0.1",
-    "json-stringify-safe": "^5.0.1",
-    "meriyah": "^1.5.0",
-    "pify": "^4.0.1"
+    "@calebboyd/async": "^1.4.0",
+    "enhanced-resolve": "^4.1.1",
+    "globby": "^11.0.0",
+    "meriyah": "^1.9.12"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^8.3.5",
+    "@commitlint/config-angular": "^8.3.4",
+    "@types/enhanced-resolve": "^3.0.6",
+    "@types/jest": "^25.2.1",
+    "@types/node": "^13.13.2",
+    "@typescript-eslint/eslint-plugin": "^2.29.0",
+    "@typescript-eslint/parser": "^2.29.0",
+    "concurrently": "^5.2.0",
+    "eslint": "^6.8.0",
+    "eslint-config-prettier": "~6.11.0",
+    "eslint-plugin-prettier": "^3.1.3",
+    "jest": "^25.4.0",
+    "prettier": "^2.0.5",
+    "tacks": "^1.3.0",
+    "typescript": "^3.8.3"
+  },
+  "jest": {
+    "testRegex": ".*?(\\.spec).js",
+    "watchPathIgnorePatterns": [
+      "\\.ts$"
+    ]
+  },
+  "prettier": {
+    "parser": "typescript",
+    "semi": false,
+    "singleQuote": true,
+    "printWidth": 120
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-angular"
+    ],
+    "rules": {
+      "type-enum": [
+        2,
+        "always",
+        [
+          "build",
+          "ci",
+          "docs",
+          "feat",
+          "fix",
+          "perf",
+          "refactor",
+          "release",
+          "revert",
+          "style",
+          "test"
+        ]
+      ]
+    }
+  },
+  "eslintConfig": {
+    "parser": "@typescript-eslint/parser",
+    "extends": [
+      "plugin:@typescript-eslint/recommended",
+      "prettier/@typescript-eslint",
+      "plugin:prettier/recommended"
+    ],
+    "overrides": [
+      {
+        "files": [
+          "*.spec.ts"
+        ],
+        "env": {
+          "jest": true
+        },
+        "rules": {
+          "@typescript-eslint/camelcase": 0
+        }
+      }
+    ],
+    "rules": {
+      "@typescript-eslint/no-var-requires": 0,
+      "@typescript-eslint/explicit-function-return-type": 0,
+      "@typescript-eslint/no-explicit-any": 0,
+      "@typescript-eslint/no-use-before-define": 0
+    }
   }
 }
