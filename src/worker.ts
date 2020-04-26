@@ -1,5 +1,4 @@
 import { fork } from 'child_process'
-import { basename } from 'path'
 import { File } from './file'
 import { Deferred, createDeferred, Semaphore } from '@calebboyd/async'
 import * as loader from './node-loader'

@@ -1,8 +1,8 @@
 {
   "name": "resolve-dependencies",
-  "version": "0.0.1",
+  "version": "4.0.0",
   "license": "MIT",
-  "main": "lib/resolve-dependencies",
+  "main": "lib/resolve",
   "files": [
     "lib",
     "!**/*.spec.js"
@@ -43,6 +43,7 @@
   "jest": {
     "testRegex": ".*?(\\.spec).js",
     "watchPathIgnorePatterns": [
+      "lib/fixture*",
       "\\.ts$"
     ]
   },
