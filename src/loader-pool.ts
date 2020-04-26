@@ -12,11 +12,13 @@ export class Loader {
   private starting: WorkerThread[]
   private ended = false
   private workerOptions: ResolveDepOptions
-  private size = Number(process.env.RESOLVE_DEPENDENCIES_CPUS) || cpus().length - 1 || 1
+  private size: number
   private currentWorker = 0
   private initializing: Promise<undefined> | undefined
 
   constructor(private options: ResolveDepOptions) {
+    const cores = (cpus() ?? []).length
+    this.size = Number(process.env.RESOLVE_DEPENDENCIES_CPUS) || (cores > 2 ? cores - 1 : 1)
     this.starting = [...Array(this.size)].map((x) => new WorkerThread({ taskConccurency: 100 }))
     this.workerOptions = { ...options, files: {} }
   }

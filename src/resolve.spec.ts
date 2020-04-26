@@ -25,6 +25,11 @@ describe('resolve-dependencies', () => {
             'package-a': dir({
               'random-file.json': file({ a: 'b' }),
               'random-file.txt': file('asdf'),
+              'not-strict.js': file(`function static(foo, values) {
+                with (foo) {
+                  console.log(values);
+                }
+              }`),
               'package.json': file({
                 version: '0.0.1',
                 name: 'package-a',
@@ -32,6 +37,7 @@ describe('resolve-dependencies', () => {
               }),
               'main.js': file(`
                 require('path')
+                require('./not-strict')
                 module.exports.foo = 'bar'
               `),
             }),
@@ -68,6 +74,7 @@ describe('resolve-dependencies', () => {
       referencedFiles = {
         'app.js': path.resolve(cwd, 'app.js'),
         'a-main.js': path.resolve(cwd, 'node_modules/package-a/main.js'),
+        'not-strict.js': path.resolve(cwd, 'node_modules/package-a/not-strict.js'),
         'a-package.json': path.resolve(cwd, 'node_modules/package-a/package.json'),
         'd-lib-index.js': path.resolve(cwd, 'node_modules/package-d/lib/index.js'),
         'd-package.json': path.resolve(cwd, 'node_modules/package-d/package.json'),

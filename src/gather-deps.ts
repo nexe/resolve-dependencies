@@ -48,17 +48,15 @@ export function gatherDependencies(code: string, isModule?: boolean) {
       if (node.type === 'ImportDeclaration' && isNodeAString(node.source)) {
         result.deps[node.source.value] = null
       }
-    }
-
-  walk(
-    parse(code, {
+    },
+    options = {
       globalReturn: true,
       next: true,
-      module: isModule || isScript(code),
+      module: isModule || !isScript(code),
       specDeviation: true,
-    }),
-    visit
-  )
+    }
+
+  walk(parse(code, options), visit)
 
   return result
 }
