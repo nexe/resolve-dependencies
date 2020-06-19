@@ -13,7 +13,7 @@ function isImport(node: any) {
   return node.callee.type === 'Import'
 }
 
-function walk(node: any, visit: Function): void {
+function walk(node: any, visit: (node: any) => void): void {
   if (!node || typeof node.type !== 'string' || node._visited) {
     return
   }

@@ -1,9 +1,19 @@
 import { relative, sep } from 'path'
 
-const esmRegex = /(^\s*|[}\);\n]\s*)(import\s*(['"]|(\*\s+as\s+)?(?!type)([^"'\(\)\n; ]+)\s*from\s*['"]|\{)|export\s+\*\s+from\s+["']|export\s*(\{|default|function|class|var|const|let|async\s+function))/
+const esmRegex = /(^\s*|[}\);\n]\s*)(import\s*(['"]|(\*\s+as\s+)?(?!type)([^"'\(\)\n; ]+)\s*from\s*['"]|\{)|export\s+\*\s+from\s+["']|export\s*(\{|default|function|class|var|const|let|async\s+function))/,
+  moduleGlob = ['**/*', '!node_modules', '!test']
 
 export function isScript(code: string) {
   return !Boolean(code.match(esmRegex))
+}
+
+export function nodeModuleGlobs(file: Pick<File, 'package' | 'belongsTo'>, useDefault?: boolean): string[] {
+  const normalGlobs = (file.package?.files || [])
+    .concat([file.package?.pkg?.scripts || []])
+    .concat([file.package?.pkg?.assets || []])
+    .flat()
+
+  return normalGlobs.length ? normalGlobs : useDefault ? moduleGlob : []
 }
 
 export type JsLoaderOptions = {

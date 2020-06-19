@@ -2,7 +2,7 @@ import { promises } from 'fs'
 import globby from 'globby'
 import { join, dirname } from 'path'
 import { gatherDependencies } from './gather-deps'
-import { File, createFile, isNodeModule, ensureDottedRelative, JsLoaderOptions } from './file'
+import { File, createFile, isNodeModule, ensureDottedRelative, JsLoaderOptions, nodeModuleGlobs } from './file'
 import { ResolverFactory, CachedInputFileSystem, NodeJsInputFileSystem } from 'enhanced-resolve'
 
 const readFile = promises.readFile
@@ -21,7 +21,6 @@ const fileSystem = new CachedInputFileSystem(new NodeJsInputFileSystem(), 4000) 
     useSyncFileSystemCalls: true,
     fileSystem,
   }) as Resolver,
-  moduleGlob = ['**/*', '!node_modules', '!test'],
   defaultOptions: JsLoaderOptions = { loadContent: true, expand: 'none', isEntry: false }
 
 export function resolveSync(from: string, request: string) {
@@ -73,8 +72,8 @@ export function resolve(
   })
 }
 
-async function expand(file: File, fileDir: string, baseDir: string, globs?: string[] | string) {
-  const files = await globby(globs || moduleGlob, { cwd: baseDir })
+async function expand(file: File, fileDir: string, baseDir: string, globs: string[] | string) {
+  const files = await globby(globs, { cwd: baseDir, unique: true, dot: true, gitignore: true })
   files
     .map((dep) => ensureDottedRelative(fileDir, join(baseDir, dep)))
     .filter((relDep) => file.absPath !== join(baseDir, relDep))
@@ -122,17 +121,21 @@ export async function load(workingDirectory: string, request: string, options = 
     file.package = pkg
     file.deps[ensureDottedRelative(fileDir, pkgPath)] = null
     if (options.expand === 'all' || (options.expand === 'variable' && file.variableImports)) {
-      await expand(file, fileDir, pkgDir, file.package.files)
+      await expand(file, fileDir, pkgDir, nodeModuleGlobs(file.package))
       file.contextExpanded = true
     }
   } else if (
     options.expand === 'variable' &&
     file.variableImports &&
-    options.context &&
-    options.context.moduleRoot &&
+    options.context?.moduleRoot &&
     !options.context.expanded
   ) {
-    await expand(file, fileDir, options.context.moduleRoot, options.context.globs)
+    await expand(
+      file,
+      fileDir,
+      options.context.moduleRoot,
+      nodeModuleGlobs({ package: { files: options.context.globs } })
+    )
     file.contextExpanded = true
   }
 
