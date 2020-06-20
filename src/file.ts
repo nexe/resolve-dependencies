@@ -7,13 +7,15 @@ export function isScript(code: string) {
   return !Boolean(code.match(esmRegex))
 }
 
-export function nodeModuleGlobs(file: Pick<File, 'package' | 'belongsTo'>, useDefault?: boolean): string[] {
+export function nodeModuleGlobs(file: Pick<File, 'package' | 'belongsTo'>, useDefault = true): string[] {
   const normalGlobs = (file.package?.files || [])
     .concat([file.package?.pkg?.scripts || []])
     .concat([file.package?.pkg?.assets || []])
     .flat()
-
-  return normalGlobs.length ? normalGlobs : useDefault ? moduleGlob : []
+  if (useDefault && !normalGlobs.length) {
+    return moduleGlob
+  }
+  return normalGlobs
 }
 
 export type JsLoaderOptions = {

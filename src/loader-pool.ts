@@ -89,7 +89,6 @@ export class Loader {
     } else {
       Object.assign(options, this.workerOptions)
     }
-
     const file = await worker.sendMessage({
       contextName: 'node-loader',
       method: 'load',

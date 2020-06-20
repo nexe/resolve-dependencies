@@ -58,7 +58,7 @@ export function resolve(
     pkg: null,
     warning: '',
   }
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     resolver.resolve({}, from, request, {}, (err: Error | null, path: string, data: any) => {
       if (err) {
         result.warning = err.message
@@ -120,7 +120,10 @@ export async function load(workingDirectory: string, request: string, options = 
     const pkgDir = (file.moduleRoot = dirname(pkgPath))
     file.package = pkg
     file.deps[ensureDottedRelative(fileDir, pkgPath)] = null
-    if (options.expand === 'all' || (options.expand === 'variable' && file.variableImports)) {
+    if (options.expand === 'all') {
+      await expand(file, fileDir, pkgDir, nodeModuleGlobs(file.package))
+      file.contextExpanded = true
+    } else if (options.expand === 'variable' && file.variableImports) {
       await expand(file, fileDir, pkgDir, nodeModuleGlobs(file.package))
       file.contextExpanded = true
     }

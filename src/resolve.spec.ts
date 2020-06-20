@@ -10,8 +10,6 @@ describe('resolve-dependencies', () => {
   let fixture: any
   let referencedFiles: { [key: string]: string }
   let unreferencedFiles: { [key: string]: string }
-  let noRefCount = 0
-  let varRefCount = 0
   let cwd: string
   let files: FileMap
   let result: { entries: { [key: string]: File }; files: FileMap; warnings: string[] }
@@ -55,7 +53,10 @@ describe('resolve-dependencies', () => {
             'package-d': dir({
               lib: dir({
                 'index.js': file(
-                  `module.exports = "wat"; require('missing'); require('./more-missing'); require('package-e')`
+                  `module.exports = "wat"; 
+                  require('missing');         //generate warning
+                  require('./more-missing');  //generate warning
+                  require('package-e')`
                 ),
                 'something.js': file('module.exports = 123'),
               }),
@@ -92,8 +93,6 @@ describe('resolve-dependencies', () => {
         'a-no-ref-random-file.json': path.resolve(cwd, 'node_modules/package-a/random-file.json'),
         'd-no-ref-something.js': path.resolve(cwd, 'node_modules/package-d/lib/something.js'),
       }
-      varRefCount = 1
-      noRefCount = 3
       fixture.create(cwd)
       result = await resolve('./app.js', { cwd })
       files = result.files
@@ -106,53 +105,46 @@ describe('resolve-dependencies', () => {
     it('should resolve all files from an entry', async () => {
       const fileNames = Object.keys(referencedFiles)
       fileNames.forEach((x) => {
-        expect(files[referencedFiles[x]]).not.toBeUndefined()
+        expect(files[referencedFiles[x]]).toBeDefined()
       })
-      expect(Object.keys(files)).toHaveLength(fileNames.length)
+      expect(Object.keys(files).sort()).toEqual(Object.values(referencedFiles).sort())
     })
 
     it('should not resolve node builtins', async () => {
       const name = referencedFiles['a-main.js']
-      expect(files[name]!.deps['path']).toEqual(null)
+      expect(files[name]).toHaveProperty(`deps.path`, null)
     })
 
     it('should resolve *all* package files when expand: all', async () => {
       result = await resolve('./app.js', { cwd, expand: 'all' })
-      files = result.files
-
-      const unreferencedFileNames = Object.keys(unreferencedFiles),
-        referencedFileNames = Object.keys(referencedFiles)
-
-      unreferencedFileNames.forEach((x) => {
-        expect(files[unreferencedFiles[x]]).not.toBeUndefined()
-      })
-      referencedFileNames.forEach((x) => {
-        expect(files[referencedFiles[x]]).not.toBeUndefined()
-      })
-      expect(Object.keys(files)).toHaveLength(unreferencedFileNames.length + referencedFileNames.length)
+      const allFiles = Object.values({ ...unreferencedFiles, ...referencedFiles }).sort()
+      expect(Object.keys(result.files).sort()).toEqual(allFiles)
     })
 
     it('should resolve *most* package files when expand: variable', async () => {
       result = await resolve('./app.js', { cwd, expand: 'variable' })
       files = result.files
-
-      const unreferencedFileNames = Object.keys(unreferencedFiles),
-        referencedFileNames = Object.keys(referencedFiles)
-      unreferencedFileNames
-        .filter((key) => {
-          key !== 'random-file.txt' && key !== 'random-file.json'
-        })
-        .forEach((x) => {
-          expect(files[unreferencedFiles[x]]).not.toBeUndefined()
-        })
-      referencedFileNames.forEach((x) => {
-        expect(files[referencedFiles[x]]).not.toBeUndefined()
-      })
-      expect(Object.keys(files)).toHaveLength(unreferencedFileNames.length + referencedFileNames.length - noRefCount)
+      const {
+        'a-no-ref-random-file.txt': _,
+        'a-no-ref-random-file.json': __,
+        'd-no-ref-something.js': ___,
+        ...notReferenced
+      } = unreferencedFiles
+      expect(Object.keys(files).sort()).toEqual(Object.values({ ...referencedFiles, ...notReferenced }).sort())
     })
 
     it('should produce warnings for un-resolvable requests', () => {
       expect(result.warnings).toHaveLength(2)
     })
+
+    it('should yield an object with the same order on sequential runs', async () => {
+      let runs = 10
+      const first = await resolve('./app.js', { cwd, expand: 'all' })
+      const keys = Object.keys(first.files)
+      while (runs--) {
+        const run = await resolve('./app.js', { cwd, expand: 'all' })
+        expect(Object.keys(run.files)).toEqual(keys)
+      }
+    }, 1e4)
   })
 })
