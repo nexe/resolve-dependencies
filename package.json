@@ -24,8 +24,8 @@
     "meriyah": "^1.9.15"
   },
   "devDependencies": {
-    "@commitlint/cli": "^8.3.5",
-    "@commitlint/config-angular": "^8.3.4",
+    "@commitlint/cli": "^9.0.1",
+    "@commitlint/config-angular": "^9.0.1",
     "@types/enhanced-resolve": "^3.0.6",
     "@types/jest": "^26.0.0",
     "@types/node": "^14.0.13",
