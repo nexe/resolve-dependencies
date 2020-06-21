@@ -2,8 +2,16 @@ import { promises } from 'fs'
 import globby from 'globby'
 import { join, dirname } from 'path'
 import { gatherDependencies } from './gather-deps'
-import { File, createFile, isNodeModule, ensureDottedRelative, JsLoaderOptions, nodeModuleGlobs } from './file'
-import { ResolverFactory, CachedInputFileSystem, NodeJsInputFileSystem } from 'enhanced-resolve'
+import {
+  File,
+  createFile,
+  isNodeModule,
+  ensureDottedRelative,
+  JsLoaderOptions,
+  nodeModuleGlobs,
+  extraGlobs,
+} from './file'
+import { ResolverFactory, CachedInputFileSystem, NodeJsInputFileSystem, context } from 'enhanced-resolve'
 
 const readFile = promises.readFile
 
@@ -106,7 +114,7 @@ export async function load(workingDirectory: string, request: string, options = 
 
   if (isJs) {
     try {
-      const parseResult = gatherDependencies(file.contents!, absPath.endsWith('.mjs') || undefined)
+      const parseResult = gatherDependencies(file.contents!, absPath.endsWith('.mjs'))
       Object.assign(file.deps, parseResult.deps)
       file.variableImports = parseResult.variable
     } catch (e) {
@@ -114,25 +122,22 @@ export async function load(workingDirectory: string, request: string, options = 
     }
   }
 
-  const fileDir = dirname(file.absPath)
+  const fileDir = dirname(file.absPath),
+    expandVariable = Boolean(options.expand === 'variable' && file.variableImports)
 
   if (isNodeModule(request) && pkg && pkgPath) {
-    const pkgDir = (file.moduleRoot = dirname(pkgPath))
     file.package = pkg
     file.deps[ensureDottedRelative(fileDir, pkgPath)] = null
-    if (options.expand === 'all') {
-      await expand(file, fileDir, pkgDir, nodeModuleGlobs(file.package))
-      file.contextExpanded = true
-    } else if (options.expand === 'variable' && file.variableImports) {
-      await expand(file, fileDir, pkgDir, nodeModuleGlobs(file.package))
+    const pkgDir = (file.moduleRoot = dirname(pkgPath)),
+      expandAll = options.expand === 'all'
+    if (expandVariable || expandAll) {
+      await expand(file, fileDir, pkgDir, nodeModuleGlobs(file))
       file.contextExpanded = true
     }
-  } else if (
-    options.expand === 'variable' &&
-    file.variableImports &&
-    options.context?.moduleRoot &&
-    !options.context.expanded
-  ) {
+    if (extraGlobs(file).length) {
+      await expand(file, fileDir, pkgDir, extraGlobs(file))
+    }
+  } else if (expandVariable && options.context?.moduleRoot && !options.context.expanded) {
     await expand(
       file,
       fileDir,

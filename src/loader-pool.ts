@@ -1,4 +1,4 @@
-import { File, FileMap, ensureDottedRelative, JsLoaderOptions, nodeModuleGlobs } from './file'
+import { File, FileMap, ensureDottedRelative, JsLoaderOptions, nodeModuleGlobs, hasModuleGlobs } from './file'
 import { resolve, dirname } from 'path'
 import { WorkerThread } from './worker'
 import builtins from './node-builtins'
@@ -106,12 +106,12 @@ export class Loader {
     }
 
     const packageGlobs: string[] = []
-    if (file.moduleRoot && file.package?.files) {
+    if (file.moduleRoot && hasModuleGlobs(file)) {
       packageGlobs.push(...nodeModuleGlobs(file, false))
     }
 
-    if (!packageGlobs.length && file?.belongsTo?.package?.files) {
-      packageGlobs.push(...nodeModuleGlobs(file.belongsTo, false))
+    if (!packageGlobs.length && hasModuleGlobs(file?.belongsTo || {})) {
+      packageGlobs.push(...nodeModuleGlobs(file.belongsTo || {}, false))
     }
 
     const fileDir = dirname(file.absPath)

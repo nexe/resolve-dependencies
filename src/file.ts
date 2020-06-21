@@ -7,11 +7,20 @@ export function isScript(code: string) {
   return !Boolean(code.match(esmRegex))
 }
 
-export function nodeModuleGlobs(file: Pick<File, 'package' | 'belongsTo'>, useDefault = true): string[] {
-  const normalGlobs = (file.package?.files || [])
+export function hasModuleGlobs(file: Pick<File, 'package' | 'belongsTo'>) {
+  return nodeModuleGlobs(file) !== moduleGlob
+}
+
+export function extraGlobs(file: Pick<File, 'package' | 'belongsTo'>) {
+  const globs: string[] = []
+  return globs
     .concat([file.package?.pkg?.scripts || []])
     .concat([file.package?.pkg?.assets || []])
     .flat()
+}
+
+export function nodeModuleGlobs(file: Pick<File, 'package' | 'belongsTo'>, useDefault = true): string[] {
+  const normalGlobs = (file.package?.files || []).flat()
   if (useDefault && !normalGlobs.length) {
     return moduleGlob
   }

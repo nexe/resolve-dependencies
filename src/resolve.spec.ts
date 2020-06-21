@@ -21,6 +21,8 @@ describe('resolve-dependencies', () => {
           'app.js': file(`require('package-a'); require('package-b'); require('package-d')`),
           node_modules: dir({
             'package-a': dir({
+              'x.js': file('module.exports = "1234"'),
+              'pkg-ref.js': file('require("./x")'),
               'random-file.json': file({ a: 'b' }),
               'random-file.txt': file('asdf'),
               'not-strict.js': file(`function static(foo, values) {
@@ -29,6 +31,9 @@ describe('resolve-dependencies', () => {
                 }
               }`),
               'package.json': file({
+                pkg: {
+                  scripts: ['./pkg-ref.js'],
+                },
                 version: '0.0.1',
                 name: 'package-a',
                 main: 'main.js',
@@ -75,6 +80,8 @@ describe('resolve-dependencies', () => {
       referencedFiles = {
         'app.js': path.resolve(cwd, 'app.js'),
         'a-main.js': path.resolve(cwd, 'node_modules/package-a/main.js'),
+        'a-pkg-ref.js': path.resolve(cwd, 'node_modules/package-a/pkg-ref.js'),
+        'a-x.js': path.resolve(cwd, 'node_modules/package-a/x.js'),
         'not-strict.js': path.resolve(cwd, 'node_modules/package-a/not-strict.js'),
         'a-package.json': path.resolve(cwd, 'node_modules/package-a/package.json'),
         'd-lib-index.js': path.resolve(cwd, 'node_modules/package-d/lib/index.js'),
