@@ -23,13 +23,13 @@ interface Resolver {
 const fileSystem = new CachedInputFileSystem(new NodeJsInputFileSystem(), 4000) as any,
   resolver = ResolverFactory.createResolver({
     extensions: ['.js', '.json', '.node'],
-    //symlinks: false,
+    symlinks: false,
     fileSystem: new CachedInputFileSystem(new NodeJsInputFileSystem(), 4000) as any,
   }) as Resolver,
   syncResolver = ResolverFactory.createResolver({
     extensions: ['.js', '.json', '.node'],
     useSyncFileSystemCalls: true,
-    //symlinks: false,
+    symlinks: false,
     fileSystem,
   }) as Resolver,
   defaultOptions: JsLoaderOptions = { loadContent: true, expand: 'none', isEntry: false }

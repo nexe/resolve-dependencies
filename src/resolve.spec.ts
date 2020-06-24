@@ -21,9 +21,9 @@ describe('resolve-dependencies', () => {
         dir({
           'app.js': file(`require('package-a'); require('package-b'); require('package-d'); require('./.dot/file')`),
           '.dot': dir({
-            'file.js': file('module.exports = require("./fileTwo"); /*require("./sym")*/'),
+            'file.js': file('module.exports = require("./fileTwo"); require("./sym")'),
             'fileTwo.js': file('module.exports = "hello world"'),
-            // 'sym.js': symlink('./fileTwo.js'),
+            'sym.js': symlink('./fileTwo.js'),
           }),
           node_modules: dir({
             'package-a': dir({
@@ -87,7 +87,7 @@ describe('resolve-dependencies', () => {
         'app.js': path.resolve(cwd, 'app.js'),
         '.dot-file.js': path.resolve(cwd, './.dot/file.js'),
         '.dot-fileTwo.js': path.resolve(cwd, './.dot/fileTwo.js'),
-        // '.dot-sym.js': path.resolve(cwd, './.dot/sym.js'),
+        '.dot-sym.js': path.resolve(cwd, './.dot/sym.js'),
         'a-main.js': path.resolve(cwd, 'node_modules/package-a/main.js'),
         'a-pkg-ref.js': path.resolve(cwd, 'node_modules/package-a/pkg-ref.js'),
         'a-x.js': path.resolve(cwd, 'node_modules/package-a/x.js'),
@@ -154,9 +154,9 @@ describe('resolve-dependencies', () => {
       expect(Object.keys(files).sort()).toEqual(Object.values({ ...referencedFiles, ...notReferenced }).sort())
     })
 
-    // it('should identify symlinks', () => {
-    //   expect(files[referencedFiles['.dot-sym.js']]).toHaveProperty('symlink', true)
-    // })
+    it('should identify symlinks', () => {
+      expect(files[referencedFiles['.dot-sym.js']]).toHaveProperty('symlink', true)
+    })
 
     it('should produce warnings for un-resolvable requests', () => {
       expect(result.warnings).toHaveLength(2)

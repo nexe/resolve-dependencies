@@ -1,6 +1,6 @@
 {
   "name": "resolve-dependencies",
-  "version": "4.2.2",
+  "version": "5.0.0",
   "license": "MIT",
   "main": "lib/resolve",
   "files": [
