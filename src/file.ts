@@ -43,6 +43,7 @@ export type FileMap = { [key: string]: File | null }
 export interface File {
   deps: FileMap
   belongsTo?: File
+  symlink?: true
   absPath: string
   contents: string | null
   contextExpanded?: boolean
@@ -60,7 +61,7 @@ export function isNodeModule(request: string) {
 
 export function ensureDottedRelative(from: string, to: string) {
   let rel = relative(from, to)
-  if (!rel.startsWith('.')) {
+  if (!rel.startsWith('.' + sep)) {
     rel = './' + rel
   }
   return rel.split(sep).join('/')

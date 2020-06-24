@@ -14,6 +14,7 @@ import {
 import { ResolverFactory, CachedInputFileSystem, NodeJsInputFileSystem, context } from 'enhanced-resolve'
 
 const readFile = promises.readFile
+const lstat = promises.lstat
 
 interface Resolver {
   resolve: (context: any, path: string, request: string, resolveContext: any, callback: any) => void
@@ -22,11 +23,13 @@ interface Resolver {
 const fileSystem = new CachedInputFileSystem(new NodeJsInputFileSystem(), 4000) as any,
   resolver = ResolverFactory.createResolver({
     extensions: ['.js', '.json', '.node'],
+    //symlinks: false,
     fileSystem: new CachedInputFileSystem(new NodeJsInputFileSystem(), 4000) as any,
   }) as Resolver,
   syncResolver = ResolverFactory.createResolver({
     extensions: ['.js', '.json', '.node'],
     useSyncFileSystemCalls: true,
+    //symlinks: false,
     fileSystem,
   }) as Resolver,
   defaultOptions: JsLoaderOptions = { loadContent: true, expand: 'none', isEntry: false }
@@ -107,7 +110,10 @@ export async function load(workingDirectory: string, request: string, options = 
     isJs = absPath.endsWith('.js') || absPath.endsWith('.mjs') || options.isEntry
 
   file.absPath = absPath
-
+  const stats = await lstat(absPath)
+  if (stats.isSymbolicLink()) {
+    file.symlink = true
+  }
   if (isJs || absPath.endsWith('json')) {
     file.contents = await readFile(absPath, 'utf-8')
   }
