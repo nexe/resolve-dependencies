@@ -1,6 +1,7 @@
 import * as path from 'path'
 import { resolve } from './resolve'
 import { FileMap, File } from './file'
+import { notDeepEqual } from 'assert'
 
 const Tacks = require('tacks'),
   file = Tacks.File,
@@ -19,7 +20,9 @@ describe('resolve-dependencies', () => {
     beforeAll(async () => {
       fixture = new Tacks(
         dir({
-          'app.js': file(`require('package-a'); require('package-b'); require('package-d'); require('./.dot/file')`),
+          'app.js': file(
+            `require('package-a'); require('package-b'); require('package-d'); require('./.dot/file')`
+          ),
           '.dot': dir({
             'file.js': file('module.exports = require("./fileTwo"); require("./sym")'),
             'fileTwo.js': file('module.exports = "hello world"'),
@@ -36,9 +39,10 @@ describe('resolve-dependencies', () => {
                   console.log(values);
                 }
               }`),
+              '.dot.txt': file('asdf'),
               'package.json': file({
                 pkg: {
-                  scripts: ['./pkg-ref.js'],
+                  scripts: ['./pkg-ref.js', './.dot.txt'],
                 },
                 version: '0.0.1',
                 name: 'package-a',
@@ -87,8 +91,9 @@ describe('resolve-dependencies', () => {
         'app.js': path.resolve(cwd, 'app.js'),
         '.dot-file.js': path.resolve(cwd, './.dot/file.js'),
         '.dot-fileTwo.js': path.resolve(cwd, './.dot/fileTwo.js'),
-        '.dot-sym.js': path.resolve(cwd, './.dot/sym.js'),
+        '.dot-sym.js': path.resolve(cwd, './.dot/sym.js'), // file is a symlink but gets its own filename still
         'a-main.js': path.resolve(cwd, 'node_modules/package-a/main.js'),
+        '.dot.txt': path.resolve(cwd, 'node_modules/package-a/.dot.txt'),
         'a-pkg-ref.js': path.resolve(cwd, 'node_modules/package-a/pkg-ref.js'),
         'a-x.js': path.resolve(cwd, 'node_modules/package-a/x.js'),
         'not-strict.js': path.resolve(cwd, 'node_modules/package-a/not-strict.js'),
@@ -142,7 +147,7 @@ describe('resolve-dependencies', () => {
       expect(Object.keys(result.files).sort()).toEqual(allFiles)
     })
 
-    it('should resolve *most* package files when expand: variable', async () => {
+    it('should resolve all referenced files when expand: variable', async () => {
       result = await resolve('./app.js', { cwd, expand: 'variable' })
       files = result.files
       const {
@@ -151,11 +156,19 @@ describe('resolve-dependencies', () => {
         'd-no-ref-something.js': ___,
         ...notReferenced
       } = unreferencedFiles
-      expect(Object.keys(files).sort()).toEqual(Object.values({ ...referencedFiles, ...notReferenced }).sort())
+      expect(Object.keys(files).sort()).toEqual(
+        Object.values({ ...referencedFiles, ...notReferenced }).sort()
+      )
     })
 
-    it('should identify symlinks', () => {
+    it('should not follow symlinks', () => {
+      expect(files[referencedFiles['.dot-sym.js']]).not.toBeUndefined()
+    })
+
+    it('should mark symlinks only if loadContent is used', async () => {
       expect(files[referencedFiles['.dot-sym.js']]).toHaveProperty('symlink', true)
+      result = await resolve('./app.js', { cwd, loadContent: false })
+      expect(result.files[referencedFiles['.dot-sym.js']]).not.toHaveProperty('symlink')
     })
 
     it('should produce warnings for un-resolvable requests', () => {

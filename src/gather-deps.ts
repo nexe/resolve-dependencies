@@ -37,7 +37,10 @@ export function gatherDependencies(code: string, isModule?: boolean) {
       deps: {},
     },
     visit = (node: any) => {
-      if (node.type === 'CallExpression' && (isRequire(node) || isImport(node) || node.type === 'ImportExpression')) {
+      if (
+        node.type === 'CallExpression' &&
+        (isRequire(node) || isImport(node) || node.type === 'ImportExpression')
+      ) {
         const request = node.arguments[0]
         if (isNodeAString(request)) {
           result.deps[request.value] = null

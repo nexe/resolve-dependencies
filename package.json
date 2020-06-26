@@ -1,6 +1,6 @@
 {
   "name": "resolve-dependencies",
-  "version": "5.0.0",
+  "version": "5.0.1",
   "license": "MIT",
   "main": "lib/resolve",
   "files": [
@@ -51,7 +51,7 @@
     "parser": "typescript",
     "semi": false,
     "singleQuote": true,
-    "printWidth": 120
+    "printWidth": 100
   },
   "commitlint": {
     "extends": [

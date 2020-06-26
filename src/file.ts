@@ -14,13 +14,15 @@ export function hasModuleGlobs(file: Pick<File, 'package' | 'belongsTo'>) {
 export function extraGlobs(file: Pick<File, 'package' | 'belongsTo'>) {
   const globs: string[] = []
   return globs
-    .concat([file.package?.pkg?.scripts || []])
-    .concat([file.package?.pkg?.assets || []])
-    .flat()
+    .concat(...[file.package?.pkg?.scripts || []])
+    .concat(...[file.package?.pkg?.assets || []])
 }
 
-export function nodeModuleGlobs(file: Pick<File, 'package' | 'belongsTo'>, useDefault = true): string[] {
-  const normalGlobs = (file.package?.files || []).flat()
+export function nodeModuleGlobs(
+  file: Pick<File, 'package' | 'belongsTo'>,
+  useDefault = true
+): string[] {
+  const normalGlobs: string[] = [].concat(...(file.package?.files || []))
   if (useDefault && !normalGlobs.length) {
     return moduleGlob
   }

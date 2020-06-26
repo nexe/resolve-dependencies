@@ -11,10 +11,9 @@ import {
   nodeModuleGlobs,
   extraGlobs,
 } from './file'
-import { ResolverFactory, CachedInputFileSystem, NodeJsInputFileSystem, context } from 'enhanced-resolve'
+import { ResolverFactory, CachedInputFileSystem, NodeJsInputFileSystem } from 'enhanced-resolve'
 
-const readFile = promises.readFile
-const lstat = promises.lstat
+const { readFile, lstat } = promises
 
 interface Resolver {
   resolve: (context: any, path: string, request: string, resolveContext: any, callback: any) => void
@@ -84,7 +83,7 @@ export function resolve(
 }
 
 async function expand(file: File, fileDir: string, baseDir: string, globs: string[] | string) {
-  const files = await globby(globs, { cwd: baseDir, unique: true, dot: true, gitignore: true })
+  const files = await globby(globs, { cwd: baseDir, gitignore: true, followSymbolicLinks: false })
   files
     .map((dep) => ensureDottedRelative(fileDir, join(baseDir, dep)))
     .filter((relDep) => file.absPath !== join(baseDir, relDep))
@@ -110,10 +109,7 @@ export async function load(workingDirectory: string, request: string, options = 
     isJs = absPath.endsWith('.js') || absPath.endsWith('.mjs') || options.isEntry
 
   file.absPath = absPath
-  const stats = await lstat(absPath)
-  if (stats.isSymbolicLink()) {
-    file.symlink = true
-  }
+
   if (isJs || absPath.endsWith('json')) {
     file.contents = await readFile(absPath, 'utf-8')
   }
@@ -155,6 +151,11 @@ export async function load(workingDirectory: string, request: string, options = 
 
   if (!options.loadContent) {
     file.contents = null
+  } else {
+    const stats = await lstat(file.absPath)
+    if (stats.isSymbolicLink()) {
+      file.symlink = true
+    }
   }
   return file
 }

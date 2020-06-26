@@ -1,4 +1,11 @@
-import { File, FileMap, ensureDottedRelative, JsLoaderOptions, nodeModuleGlobs, hasModuleGlobs } from './file'
+import {
+  File,
+  FileMap,
+  ensureDottedRelative,
+  JsLoaderOptions,
+  nodeModuleGlobs,
+  hasModuleGlobs,
+} from './file'
 import { resolve, dirname } from 'path'
 import { WorkerThread } from './worker'
 import builtins from './node-builtins'
