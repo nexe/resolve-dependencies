@@ -1,6 +1,7 @@
 import * as path from 'path'
 import { resolve } from './resolve'
 import { FileMap, File } from './file'
+import { describe, it, beforeAll, afterAll, expect } from '@jest/globals'
 
 const Tacks = require('tacks'),
   file = Tacks.File,
