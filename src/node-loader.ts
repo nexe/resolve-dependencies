@@ -1,4 +1,4 @@
-import { promises } from 'fs'
+import * as fs from 'fs'
 import globby from 'globby'
 import { join, dirname } from 'path'
 import { gatherDependencies } from './gather-deps'
@@ -11,9 +11,11 @@ import {
   nodeModuleGlobs,
   extraGlobs,
 } from './file'
+import { promisify } from 'util'
 import { ResolverFactory, CachedInputFileSystem, NodeJsInputFileSystem } from 'enhanced-resolve'
 
-const { readFile, lstat } = promises
+const readFile = promisify(fs.readFile),
+  lstat = promisify(fs.lstat)
 
 interface Resolver {
   resolve: (context: any, path: string, request: string, resolveContext: any, callback: any) => void
