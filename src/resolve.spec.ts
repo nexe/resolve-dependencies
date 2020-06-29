@@ -14,7 +14,7 @@ describe('resolve-dependencies', () => {
   let unreferencedFiles: { [key: string]: string }
   let cwd: string
   let files: FileMap
-  let result: { entries: { [key: string]: File }; files: FileMap; warnings: string[] }
+  let result: { entries: FileMap; files: FileMap; warnings: string[] }
 
   describe('resolve - gathers all dependencies', () => {
     beforeAll(async () => {
@@ -161,29 +161,19 @@ describe('resolve-dependencies', () => {
       )
     })
 
-    it('should not follow symlinks', () => {
-      expect(files[referencedFiles['.dot-sym.js']]).not.toBeUndefined()
-    })
+    it('should handle symlinks', () => {
+      const symlinkedFile = files[referencedFiles['.dot-sym.js']]
+      expect(symlinkedFile).not.toBeUndefined()
+      expect(symlinkedFile).toHaveProperty('realpath', referencedFiles['.dot-fileTwo.js'])
 
-    it('should mark symlinks only if loadContent is used', async () => {
-      expect(files[referencedFiles['.dot-sym.js']]).toHaveProperty('symlink', true)
-      result = await resolve('./app.js', { cwd, loadContent: false })
-      expect(result.files[referencedFiles['.dot-sym.js']]).not.toHaveProperty('symlink')
+      expect(files[referencedFiles['app.js']]).not.toHaveProperty('realpath')
+      //size is size of symlink
+      expect(symlinkedFile?.size).toBeLessThan(Buffer.byteLength(symlinkedFile?.contents ?? ''))
     })
 
     it('should produce warnings for un-resolvable requests', () => {
       expect(result.warnings).toHaveLength(2)
     })
-
-    it('should yield an object with the same order on sequential runs', async () => {
-      let runs = 10
-      const first = await resolve('./app.js', { cwd, expand: 'all' })
-      const keys = Object.keys(first.files)
-      while (runs--) {
-        const run = await resolve('./app.js', { cwd, expand: 'all' })
-        expect(Object.keys(run.files)).toEqual(keys)
-      }
-    }, 1e4)
 
     it('dot file entry', async () => {
       const entry = './.dot/file.js'

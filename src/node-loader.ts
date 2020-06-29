@@ -15,7 +15,8 @@ import { promisify } from 'util'
 import { ResolverFactory, CachedInputFileSystem, NodeJsInputFileSystem } from 'enhanced-resolve'
 
 const readFile = promisify(fs.readFile),
-  lstat = promisify(fs.lstat)
+  lstat = promisify(fs.lstat),
+  realpath = promisify(fs.realpath)
 
 interface Resolver {
   resolve: (context: any, path: string, request: string, resolveContext: any, callback: any) => void
@@ -35,7 +36,9 @@ const fileSystem = new CachedInputFileSystem(new NodeJsInputFileSystem(), 4000) 
   }) as Resolver,
   defaultOptions: JsLoaderOptions = { loadContent: true, expand: 'none', isEntry: false }
 
-export function resolveSync(from: string, request: string) {
+export type Resolved = { absPath: string; pkgPath: string; pkg: any; warning: string }
+
+export function resolveSync(from: string, request: string): Resolved {
   const result = {
     absPath: '',
     pkgPath: '',
@@ -55,15 +58,7 @@ export function resolveSync(from: string, request: string) {
   return result
 }
 
-export function resolve(
-  from: string,
-  request: string
-): Promise<{
-  absPath: string
-  pkgPath: string
-  pkg: any
-  warning: string
-}> {
+export function resolve(from: string, request: string): Promise<Resolved> {
   const result = {
     absPath: '',
     pkgPath: '',
@@ -102,7 +97,11 @@ async function expand(file: File, fileDir: string, baseDir: string, globs: strin
     })
 }
 
-export async function load(workingDirectory: string, request: string, options = defaultOptions) {
+export async function load(
+  workingDirectory: string,
+  request: string,
+  options = defaultOptions
+): Promise<File | { warning: string }> {
   const { absPath, pkg, pkgPath, warning } = await resolve(workingDirectory, request)
   if (!absPath) {
     return { warning: warning }
@@ -118,7 +117,7 @@ export async function load(workingDirectory: string, request: string, options = 
 
   if (isJs) {
     try {
-      const parseResult = gatherDependencies(file.contents!, absPath.endsWith('.mjs'))
+      const parseResult = gatherDependencies(file.contents, absPath.endsWith('.mjs'))
       Object.assign(file.deps, parseResult.deps)
       file.variableImports = parseResult.variable
     } catch (e) {
@@ -153,11 +152,11 @@ export async function load(workingDirectory: string, request: string, options = 
 
   if (!options.loadContent) {
     file.contents = null
-  } else {
-    const stats = await lstat(file.absPath)
-    if (stats.isSymbolicLink()) {
-      file.symlink = true
-    }
   }
+  const stats = await lstat(file.absPath)
+  if (stats.isSymbolicLink()) {
+    file.realpath = await realpath(file.absPath)
+  }
+  file.size = stats.size
   return file
 }

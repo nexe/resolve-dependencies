@@ -1,18 +1,9 @@
-import {
-  File,
-  FileMap,
-  ensureDottedRelative,
-  JsLoaderOptions,
-  nodeModuleGlobs,
-  hasModuleGlobs,
-} from './file'
+import { File, FileMap, ensureDottedRelative, nodeModuleGlobs, hasModuleGlobs } from './file'
 import { resolve, dirname } from 'path'
 import { WorkerThread } from './worker'
 import builtins from './node-builtins'
 import { cpus } from 'os'
 import { ResolveDepOptions } from './options'
-
-type context = Pick<JsLoaderOptions, 'context'>['context']
 
 export class Loader {
   private pool: WorkerThread[] = []
@@ -26,11 +17,11 @@ export class Loader {
   constructor(private options: ResolveDepOptions) {
     const cores = (cpus() ?? []).length
     this.size = Number(process.env.RESOLVE_DEPENDENCIES_CPUS) || (cores > 2 ? cores - 1 : 1)
-    this.starting = [...Array(this.size)].map((x) => new WorkerThread({ taskConccurency: 100 }))
+    this.starting = [...Array(this.size)].map(() => new WorkerThread({ taskConccurency: 100 }))
     this.workerOptions = { ...options, files: {} }
   }
 
-  setup() {
+  setup(): Promise<void> {
     if (this.initializing) {
       return this.initializing
     }
@@ -55,7 +46,7 @@ export class Loader {
     ).then(() => undefined))
   }
 
-  quit() {
+  quit(): void {
     this.ended = true
     this.pool.forEach((x) => x.end())
   }
@@ -69,11 +60,16 @@ export class Loader {
     return worker
   }
 
-  loadEntry(workingDirectory: string, request: string, files: FileMap = {}, warnings = []) {
+  loadEntry(
+    workingDirectory: string,
+    request: string,
+    files: FileMap = {},
+    warnings = []
+  ): Promise<{ entry: File; files: FileMap; warnings: string[] }> {
     const mainFile = ensureDottedRelative(workingDirectory, resolve(workingDirectory, request))
     return this.load(workingDirectory, mainFile, files, warnings).then(
       (entry) => {
-        return { entry, files, warnings }
+        return { entry: entry as File, files, warnings }
       },
       (e) => {
         throw e

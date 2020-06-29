@@ -1,7 +1,6 @@
 import { fork } from 'child_process'
 import { File } from './file'
 import { Deferred, createDeferred, Semaphore } from '@calebboyd/async'
-import * as loader from './node-loader'
 
 export type IpcArgs =
   | { modulePath: string; contextName: string; options?: any }
@@ -26,14 +25,14 @@ export class WorkerThread {
     })
   }
 
-  sendMessage(message: IpcArgs) {
+  sendMessage(message: IpcArgs): Promise<File | { warning: string }> {
     return this.lock.acquire().then((id: number) => {
       this.child.send({ id, ...message })
       return (this.pending[id] = createDeferred<File | { warning: string }>()).promise
     })
   }
 
-  end() {
+  end(): void {
     this.child.kill()
   }
 }

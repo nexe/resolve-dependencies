@@ -31,12 +31,18 @@ function walk(node: any, visit: (node: any) => void): void {
   }
 }
 
-export function gatherDependencies(code: string, isModule?: boolean) {
+export function gatherDependencies(
+  code: string | null,
+  isModule?: boolean
+): { variable: boolean; deps: { [key: string]: any } } {
   const result: { variable: boolean; deps: { [key: string]: any } } = {
-      variable: false,
-      deps: {},
-    },
-    visit = (node: any) => {
+    variable: false,
+    deps: {},
+  }
+  if (!code) {
+    return result
+  }
+  const visit = (node: any) => {
       if (
         node.type === 'CallExpression' &&
         (isRequire(node) || isImport(node) || node.type === 'ImportExpression')
