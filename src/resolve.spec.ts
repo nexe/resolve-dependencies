@@ -163,10 +163,12 @@ describe('resolve-dependencies', () => {
 
     it('should handle symlinks', () => {
       const symlinkedFile = files[referencedFiles['.dot-sym.js']]
+      const linkedFile = files[referencedFiles['.dot-fileTwo.js']]
       expect(symlinkedFile).not.toBeUndefined()
-      expect(symlinkedFile).toHaveProperty('realpath', referencedFiles['.dot-fileTwo.js'])
+      expect(symlinkedFile).toHaveProperty('realPath', referencedFiles['.dot-fileTwo.js'])
+      expect(symlinkedFile).toHaveProperty('realSize', linkedFile?.size)
 
-      expect(files[referencedFiles['app.js']]).not.toHaveProperty('realpath')
+      expect(files[referencedFiles['app.js']]).not.toHaveProperty('realPath')
       //size is size of symlink
       expect(symlinkedFile?.size).toBeLessThan(Buffer.byteLength(symlinkedFile?.contents ?? ''))
     })

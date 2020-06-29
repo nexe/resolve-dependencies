@@ -45,7 +45,8 @@ export type FileMap = { [key: string]: File | null }
 export interface File {
   deps: FileMap
   belongsTo?: File
-  realpath?: string
+  realSize?: number
+  realPath?: string
   size: number
   absPath: string
   contents: string | null

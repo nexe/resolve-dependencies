@@ -16,6 +16,7 @@ import { ResolverFactory, CachedInputFileSystem, NodeJsInputFileSystem } from 'e
 
 const readFile = promisify(fs.readFile),
   lstat = promisify(fs.lstat),
+  stat = promisify(fs.stat),
   realpath = promisify(fs.realpath)
 
 interface Resolver {
@@ -155,7 +156,9 @@ export async function load(
   }
   const stats = await lstat(file.absPath)
   if (stats.isSymbolicLink()) {
-    file.realpath = await realpath(file.absPath)
+    const [path, absStat] = await Promise.all([realpath(file.absPath), stat(file.absPath)])
+    file.realPath = path
+    file.realSize = absStat.size
   }
   file.size = stats.size
   return file
