@@ -1,24 +1,44 @@
-# resolve-dependencies
+<h2 align="center">resolve-dependencies</h2>
 
-Given an entrypoint, get a map of files, with their contents, description and dependencies. 
+---
 
-File processing occurs concurrently in (CPUs - 1) child processes.
+<p align="center"><code>npm i resolve-dependencies</code></p>
 
-### `Options`
+`resolve-dependencies` is the very originally named bundler for [nexe](https://github.com/nexe/nexe). It wasn't our intention to build a bundler but that is kind of what this is.
 
-A string:
-- an entrypoint to begin traversal from
+## Exports
 
-An object:
-- `entries`:  string[]                              - a list of entrypoints to traverse, resolved against cwd
-- `cwd`:      string                                - the base directory that the resolution occurs from
-- `loadContent`: boolean                            - indicates that the content should be included int he FileMap (this may be unreasonable for large dependency trees)
-- `files`: ({ [key: string]: File | null })[]       - a cache of already resolved files
-- `expand`: 'all' | 'none' | 'variable'             - how module contexts should be expanded to include extra files
 
-Strings and Objects
-- Strings are treated as entries
-- Objects are merged
+### `resolve(options: Options, ...opts: Options[]): Promise<Result>`
+  
+  - `Options`: Object | string
+    - `entries`:  string[]                              - a list of entrypoints to traverse, resolved against cwd
+    - `cwd`:      string                                - the base directory that the resolution occurs from
+    - `loadContent`: boolean                            - indicates that the content should be included int he FileMap (this may be unreasonable for large dependency trees)
+    - `files`: ({ [key: string]: File | null })[]       - a cache of already resolved files
+    - `expand`: 'all' | 'none' | 'variable'             - how module contexts should be expanded to include extra files
+
+All options are deeply merged, string options are added as `entries`
+
+Result returns a Promise of a result object:
+  - `Result`: Object
+    - `entries`: { [key: entry]: File } - all the entries as provided to the `resolve` method and the tree of connected `files`
+    - `files`: { [key: absPath]: File } - all resolved files keyed by their absolute path
+    - `warnings`: string[] - an array warnings generated while processing the `files`
+
+A `File` has the following shape
+  - `File`: Object
+    - `size`: number
+    - `absPath`: string
+    - `moduleRoot`: string
+    - `package`: any | undefined
+    - `deps`: { [key: request]: File | null }
+    - `belongsTo`: File | undefined
+    - `realSize`: number | undefined
+    - `realPath`: string | undefined
+    - `contents`: string | null
+    - `contextExpanded`: boolean
+    - `variableImports`: boolean
 
 
 ```javascript
@@ -28,9 +48,13 @@ import { resolve } from 'resolve-dependencies'
   const { entries, files } = await resolve('./entry-file.js')
   console.log(entries['./entry-file.js'])
 })()
+
 // {
 //   absPath: "/path/to/entry-file.js",
 //   contents: "console.log('hello world')",
+//   realSize: 26,
+//   realPath: "/path/to/entry/lib/file.js"
+//   size: 12
 //   variableImports: false,
 //   deps: {
 //     "./dependency": {
@@ -42,7 +66,7 @@ import { resolve } from 'resolve-dependencies'
 //       absPath: "/path/to/node_modules/mkdirp/index.js",
 //       modulePath: "/path/to/node_modules/mkdirp",
 //       package: {
-//         name: 'mkdirp'
+//         name: "mkdirp"
 //         ...
 //       }
 //     }
