@@ -41,6 +41,8 @@ A `File` has the following shape
     - `variableImports`: boolean
 
 
+## Example:
+
 ```javascript
 import { resolve } from 'resolve-dependencies'
 
