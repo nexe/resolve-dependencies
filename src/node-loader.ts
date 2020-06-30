@@ -84,7 +84,7 @@ export function resolve(
 }
 
 async function expand(file: File, fileDir: string, baseDir: string, globs: string[] | string) {
-  const files = await globby(globs, { cwd: baseDir, unique: true, dot: true, gitignore: true })
+  const files = await globby(globs, { cwd: baseDir, unique: true, dot: true })
   files
     .map((dep) => ensureDottedRelative(fileDir, join(baseDir, dep)))
     .filter((relDep) => file.absPath !== join(baseDir, relDep))
