@@ -42,6 +42,7 @@ export type JsLoaderOptions = {
 }
 
 export type FileMap = { [key: string]: File | null }
+export type Files = { [key: string]: File }
 export interface File {
   deps: FileMap
   belongsTo?: File
