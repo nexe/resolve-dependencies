@@ -9,47 +9,45 @@
 ## Exports
 
 
-### `resolve(options: Options, ...opts: Options[]): Promise<Result>`
+### `default: resolveSync(options: Options, ...opts: Options[]): Promise<Result>`
   
-  - `Options`: Object | string
-    - `entries`:  string[]                              - a list of entrypoints to traverse, resolved against cwd
-    - `cwd`:      string                                - the base directory that the resolution occurs from
-    - `loadContent`: boolean                            - indicates that the content should be included int he FileMap (this may be unreasonable for large dependency trees)
-    - `files`: ({ [key: string]: File | null })[]       - a cache of already resolved files
-    - `expand`: 'all' | 'none' | 'variable'             - how module contexts should be expanded to include extra files
+  - `Options`: _Object | string_ -- the entry to start from (if string)
+    - `entries`: _string[]_ -- a list of entrypoints to traverse, resolved against cwd
+    - `cwd`: _string_ -- the base directory that the resolution occurs from
+    - `loadContent`: _boolean_ -- indicates that the content should be included int he FileMap (this may be unreasonable for large dependency trees)
+    - `files`: _({ [key: string]: File | null })[]_ -- a cache of already resolved files
+    - `expand`: _'all' | 'none' | 'variable'_ -- how module contexts should be expanded to include extra files
 
 All options are deeply merged, string options are added as `entries`
 
 Result returns a Promise of a result object:
-  - `Result`: Object
-    - `entries`: { [key: entry]: File } - all the entries as provided to the `resolve` method and the tree of connected `files`
-    - `files`: { [key: absPath]: File } - all resolved files keyed by their absolute path
-    - `warnings`: string[] - an array warnings generated while processing the `files`
+  - `Result`: _Object_
+    - `entries`: _{ [key: entry]: File }_ - all the entries as provided to the `resolve` method and the tree of connected `files`
+    - `files`: _{ [key: absPath]: File }_ - all resolved files keyed by their absolute path
+    - `warnings`: _string[]_ - an array warnings generated while processing the `files`
 
 A `File` has the following shape
-  - `File`: Object
-    - `size`: number
-    - `absPath`: string
-    - `moduleRoot`: string
-    - `package`: any | undefined
-    - `deps`: { [key: request]: File | null }
-    - `belongsTo`: File | undefined
-    - `realSize`: number | undefined
-    - `realPath`: string | undefined
-    - `contents`: string | null
-    - `contextExpanded`: boolean
-    - `variableImports`: boolean
+  - `File`: _Object_ -- An object representing a file
+    - `size`: _number_ -- file size of the link or file
+    - `absPath`: _string_ -- absolute path to the file
+    - `moduleRoot`: _string | undefined_ -- Directory containing a modules package.json
+    - `package`: _any | undefined_
+    - `deps`: _{ [key: request]: File | null }_ -- Dependencies identified in the file, keyed by request
+    - `belongsTo`: _File | undefined_ -- The main file of the owning module
+    - `realSize`: _number | undefined_ -- set to the realfile size if the absPath is a symlink
+    - `realPath`: _string | undefined_ -- set to the realpath if the absPath is a symlink
+    - `contents`: _string | null_
+    - `contextExpanded`: _boolean_
+    - `variableImports`: _boolean_
 
 
 ## Example:
 
 ```javascript
-import { resolve } from 'resolve-dependencies'
+import resolveDependencies from 'resolve-dependencies'
 
-;(async () => {
-  const { entries, files } = await resolve('./entry-file.js')
-  console.log(entries['./entry-file.js'])
-})()
+const { entries, files } = resolveDependencies('./entry-file.js')
+console.log(entries['./entry-file.js'])
 
 // {
 //   absPath: "/path/to/entry-file.js",
