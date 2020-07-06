@@ -1,6 +1,6 @@
 import * as path from 'path'
-import { resolve } from './resolve'
-import { FileMap, File } from './file'
+import resolveFilesSync from './resolve'
+import { FileMap } from './file'
 import { describe, it, beforeAll, afterAll, expect } from '@jest/globals'
 
 const Tacks = require('tacks'),
@@ -115,7 +115,7 @@ describe('resolve-dependencies', () => {
         'd-no-ref-something.js': path.resolve(cwd, 'node_modules/package-d/lib/something.js'),
       }
       fixture.create(cwd)
-      result = await resolve('./app.js', { cwd })
+      result = resolveFilesSync('./app.js', { cwd })
       files = result.files
     })
 
@@ -141,14 +141,14 @@ describe('resolve-dependencies', () => {
       expect(files[name]).toHaveProperty(`deps.path`, null)
     })
 
-    it('should resolve *all* package files when expand: all', async () => {
-      result = await resolve('./app.js', { cwd, expand: 'all' })
+    it('should resolve *all* package files when expand: all', () => {
+      result = resolveFilesSync('./app.js', { cwd, expand: 'all' })
       const allFiles = Object.values({ ...unreferencedFiles, ...referencedFiles }).sort()
       expect(Object.keys(result.files).sort()).toEqual(allFiles)
     })
 
-    it('should resolve all referenced files when expand: variable', async () => {
-      result = await resolve('./app.js', { cwd, expand: 'variable' })
+    it('should resolve all referenced files when expand: variable', () => {
+      result = resolveFilesSync('./app.js', { cwd, expand: 'variable' })
       files = result.files
       const {
         'a-no-ref-random-file.txt': _,
@@ -177,9 +177,9 @@ describe('resolve-dependencies', () => {
       expect(result.warnings).toHaveLength(2)
     })
 
-    it('dot file entry', async () => {
+    it('dot file entry', () => {
       const entry = './.dot/file.js'
-      result = await resolve(entry, { cwd, expand: 'all' })
+      result = resolveFilesSync(entry, { cwd, expand: 'all' })
       expect(result.entries[entry]).not.toBeNull()
     })
   })

@@ -1,5 +1,5 @@
 import * as fs from 'fs'
-import globby from 'globby'
+import { sync as glob } from 'globby'
 import { join, dirname } from 'path'
 import { gatherDependencies } from './gather-deps'
 import {
@@ -11,13 +11,9 @@ import {
   nodeModuleGlobs,
   extraGlobs,
 } from './file'
-import { promisify } from 'util'
 import { ResolverFactory, CachedInputFileSystem, NodeJsInputFileSystem } from 'enhanced-resolve'
 
-const readFile = promisify(fs.readFile),
-  lstat = promisify(fs.lstat),
-  stat = promisify(fs.stat),
-  realpath = promisify(fs.realpath)
+const { readFileSync, lstatSync, statSync, realpathSync } = fs
 
 interface Resolver {
   resolve: (context: any, path: string, request: string, resolveContext: any, callback: any) => void
@@ -35,7 +31,7 @@ const fileSystem = new CachedInputFileSystem(new NodeJsInputFileSystem(), 4000) 
     symlinks: false,
     fileSystem,
   }) as Resolver,
-  defaultOptions: JsLoaderOptions = { loadContent: true, expand: 'none', isEntry: false }
+  defaultOptions: Partial<JsLoaderOptions> = { loadContent: true, expand: 'none', isEntry: false }
 
 export type Resolved = { absPath: string; pkgPath: string; pkg: any; warning: string }
 
@@ -81,8 +77,12 @@ export function resolve(from: string, request: string): Promise<Resolved> {
 }
 
 async function expand(file: File, fileDir: string, baseDir: string, globs: string[] | string) {
-  const files = await globby(globs, { cwd: baseDir, followSymbolicLinks: false })
+  const files = glob(globs, {
+    cwd: baseDir,
+    followSymbolicLinks: false,
+  })
   files
+    .sort() //glob search is width first and not deterministic
     .map((dep) => ensureDottedRelative(fileDir, join(baseDir, dep)))
     .filter((relDep) => file.absPath !== join(baseDir, relDep))
     .forEach((relDep) => {
@@ -98,12 +98,12 @@ async function expand(file: File, fileDir: string, baseDir: string, globs: strin
     })
 }
 
-export async function load(
+export function load(
   workingDirectory: string,
   request: string,
   options = defaultOptions
-): Promise<File | { warning: string }> {
-  const { absPath, pkg, pkgPath, warning } = await resolve(workingDirectory, request)
+): File | { warning: string } {
+  const { absPath, pkg, pkgPath, warning } = resolveSync(workingDirectory, request)
   if (!absPath) {
     return { warning: warning }
   }
@@ -113,7 +113,7 @@ export async function load(
   file.absPath = absPath
 
   if (isJs || absPath.endsWith('json')) {
-    file.contents = await readFile(absPath, 'utf-8')
+    file.contents = readFileSync(absPath, 'utf-8')
   }
 
   if (isJs) {
@@ -135,14 +135,14 @@ export async function load(
     const pkgDir = (file.moduleRoot = dirname(pkgPath)),
       expandAll = options.expand === 'all'
     if (expandVariable || expandAll) {
-      await expand(file, fileDir, pkgDir, nodeModuleGlobs(file))
+      expand(file, fileDir, pkgDir, nodeModuleGlobs(file))
       file.contextExpanded = true
     }
     if (extraGlobs(file).length) {
-      await expand(file, fileDir, pkgDir, extraGlobs(file))
+      expand(file, fileDir, pkgDir, extraGlobs(file))
     }
   } else if (expandVariable && options.context?.moduleRoot && !options.context.expanded) {
-    await expand(
+    expand(
       file,
       fileDir,
       options.context.moduleRoot,
@@ -154,9 +154,10 @@ export async function load(
   if (!options.loadContent) {
     file.contents = null
   }
-  const stats = await lstat(file.absPath)
+  const stats = lstatSync(file.absPath)
   if (stats.isSymbolicLink()) {
-    const [path, absStat] = await Promise.all([realpath(file.absPath), stat(file.absPath)])
+    const path = realpathSync(file.absPath)
+    const absStat = statSync(file.absPath)
     file.realPath = path
     file.realSize = absStat.size
   }
