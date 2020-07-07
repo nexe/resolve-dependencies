@@ -13,8 +13,6 @@ export class Loader {
     warnings = []
   ): { entry: File; files: FileMap; warnings: string[] } {
     const mainFile = ensureDottedRelative(workingDirectory, resolve(workingDirectory, request))
-    console.log('MAIN', mainFile)
-
     const entry = this.load(workingDirectory, mainFile, files, warnings)
     return { entry: entry as File, files, warnings }
   }
