@@ -20,16 +20,16 @@
   "dependencies": {
     "enhanced-resolve": "^4.3.0",
     "globby": "^11.0.1",
-    "meriyah": "^2.1.0"
+    "meriyah": "^2.1.1"
   },
   "devDependencies": {
-    "@commitlint/cli": "^9.1.1",
+    "@commitlint/cli": "^9.1.2",
     "@commitlint/config-angular": "^9.1.1",
     "@types/enhanced-resolve": "^3.0.6",
-    "@types/jest": "^26.0.5",
-    "@types/node": "^14.0.24",
-    "@typescript-eslint/eslint-plugin": "^3.7.0",
-    "@typescript-eslint/parser": "^3.7.0",
+    "@types/jest": "^26.0.7",
+    "@types/node": "^14.0.27",
+    "@typescript-eslint/eslint-plugin": "^3.7.1",
+    "@typescript-eslint/parser": "^3.7.1",
     "concurrently": "^5.2.0",
     "eslint": "^7.5.0",
     "eslint-config-prettier": "~6.11.0",
