@@ -11,7 +11,7 @@ import {
   nodeModuleGlobs,
   extraGlobs,
 } from './file'
-import { ResolverFactory, CachedInputFileSystem, NodeJsInputFileSystem } from 'enhanced-resolve'
+import { ResolverFactory, CachedInputFileSystem } from 'enhanced-resolve'
 
 const { readFileSync, lstatSync, statSync, realpathSync } = fs
 
@@ -19,11 +19,11 @@ interface Resolver {
   resolve: (context: any, path: string, request: string, resolveContext: any, callback: any) => void
 }
 
-const fileSystem = new CachedInputFileSystem(new NodeJsInputFileSystem(), 4000) as any,
+const fileSystem = new CachedInputFileSystem(fs, 4000) as any,
   resolver = ResolverFactory.createResolver({
     extensions: ['.js', '.json', '.node'],
     symlinks: false,
-    fileSystem: new CachedInputFileSystem(new NodeJsInputFileSystem(), 4000) as any,
+    fileSystem: new CachedInputFileSystem(fs, 4000) as any,
   }) as Resolver,
   syncResolver = ResolverFactory.createResolver({
     extensions: ['.js', '.json', '.node'],

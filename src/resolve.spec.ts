@@ -81,7 +81,7 @@ describe('resolve-dependencies', () => {
               'b.js': file('console.log("wat")'),
               'a.js': file('var mod = "./b.js"; require(mod)'),
               'entry.js': file('require("./a.js")'),
-              'package.json': file({ name: 'package-e', main: 'entry.js' }),
+              'package.json': file({ name: 'package-e', exports: 'entry.js' }),
             }),
           }),
         })
