@@ -35,6 +35,10 @@ const fileSystem = new CachedInputFileSystem(fs, 4000) as any,
 
 export type Resolved = { absPath: string; pkgPath: string; pkg: any; warning: string }
 
+function scc(path: string) {
+  return path && path.replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
+}
+
 export function resolveSync(from: string, request: string): Resolved {
   const result = {
     absPath: '',
@@ -47,8 +51,8 @@ export function resolveSync(from: string, request: string): Resolved {
       result.warning = err.message
       return
     }
-    result.absPath = path
-    result.pkgPath = data.descriptionFilePath
+    result.absPath = scc(path)
+    result.pkgPath = scc(data.descriptionFilePath)
     result.pkg = data.descriptionFileData
     return
   })
@@ -107,6 +111,7 @@ export function load(
   if (!absPath) {
     return { warning: warning }
   }
+
   const file = createFile(absPath),
     isJs = absPath.endsWith('.js') || absPath.endsWith('.mjs') || options.isEntry
 
