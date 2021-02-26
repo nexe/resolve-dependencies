@@ -1,6 +1,6 @@
 {
   "name": "resolve-dependencies",
-  "version": "6.0.5",
+  "version": "6.0.6",
   "license": "MIT",
   "main": "lib/resolve",
   "files": [
@@ -79,7 +79,9 @@
   },
   "eslintConfig": {
     "parser": "@typescript-eslint/parser",
-    "plugins": ["@typescript-eslint"],
+    "plugins": [
+      "@typescript-eslint"
+    ],
     "extends": [
       "plugin:@typescript-eslint/recommended",
       "plugin:prettier/recommended"
