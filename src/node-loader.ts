@@ -22,11 +22,13 @@ interface Resolver {
 const fileSystem = new CachedInputFileSystem(fs, 4000) as any,
   resolver = ResolverFactory.createResolver({
     extensions: ['.js', '.json', '.node'],
+    conditionNames: ['node', 'require'],
     symlinks: false,
     fileSystem: new CachedInputFileSystem(fs, 4000) as any,
   }) as Resolver,
   syncResolver = ResolverFactory.createResolver({
     extensions: ['.js', '.json', '.node'],
+    conditionNames: ['node', 'require'],
     useSyncFileSystemCalls: true,
     symlinks: false,
     fileSystem,
