@@ -9,16 +9,37 @@ const Tacks = require('tacks'),
   symlink = Tacks.Symlink
 
 describe('resolve-dependencies', () => {
-  let fixture: any
+  let fixtureCjs: any
+  let fixtureEsm: any
   let referencedFiles: { [key: string]: string }
   let unreferencedFiles: { [key: string]: string }
-  let cwd: string
+  const cwdCjs = path.resolve(__dirname, 'fixture-a')
+  const cwdEsm = path.resolve(__dirname, 'fixture-b')
   let files: FileMap
   let result: { entries: FileMap; files: FileMap; warnings: string[] }
 
   describe('resolve - gathers all dependencies', () => {
     beforeAll(async () => {
-      fixture = new Tacks(
+      fixtureEsm = new Tacks(
+        dir({
+          'package.json': file({
+            name: 'dual-mode-app-package',
+            type: 'module',
+            exports: {
+              node: { '.': { import: './entry.js', require: './cjs/entry.js' } },
+            },
+          }),
+          cjs: dir({
+            'package.json': file({ type: 'commonjs' }),
+            'entry.js': file('const x = require("./test")'),
+            'test.js': file('module.exports = "1234"'),
+          }),
+          'entry.js': file('import x from "./test.js"'),
+          'test.js': file('const x = "1234"; export default x'),
+        })
+      )
+
+      fixtureCjs = new Tacks(
         dir({
           'app.js': file(
             `require('package-a'); require('package-b'); require('package-d'); require('./.dot/file')`
@@ -26,11 +47,11 @@ describe('resolve-dependencies', () => {
           '.dot': dir({
             'file.js': file('module.exports = require("./fileTwo"); require("./sym")'),
             'fileTwo.js': file('module.exports = "hello world"'),
-            'sym.js': symlink('./fileTwo.js'),
+            'sym.cjs': symlink('./fileTwo.js'),
           }),
           node_modules: dir({
             'package-a': dir({
-              'x.js': file('module.exports = "1234"'),
+              'x.cjs': file('module.exports = "1234"'),
               'pkg-ref.js': file('require("./x")'),
               'random-file.json': file({ a: 'b' }),
               'random-file.txt': file('asdf'),
@@ -86,41 +107,45 @@ describe('resolve-dependencies', () => {
           }),
         })
       )
-      cwd = path.resolve(__dirname, 'fixture-a')
       referencedFiles = {
-        'app.js': path.resolve(cwd, 'app.js'),
-        '.dot-file.js': path.resolve(cwd, './.dot/file.js'),
-        '.dot-fileTwo.js': path.resolve(cwd, './.dot/fileTwo.js'),
-        '.dot-sym.js': path.resolve(cwd, './.dot/sym.js'), // file is a symlink but gets its own filename still
-        'a-main.js': path.resolve(cwd, 'node_modules/package-a/main.js'),
-        '.dot.txt': path.resolve(cwd, 'node_modules/package-a/.dot.txt'),
-        'a-pkg-ref.js': path.resolve(cwd, 'node_modules/package-a/pkg-ref.js'),
-        'a-x.js': path.resolve(cwd, 'node_modules/package-a/x.js'),
-        'not-strict.js': path.resolve(cwd, 'node_modules/package-a/not-strict.js'),
-        'a-package.json': path.resolve(cwd, 'node_modules/package-a/package.json'),
-        'd-lib-index.js': path.resolve(cwd, 'node_modules/package-d/lib/index.js'),
-        'd-package.json': path.resolve(cwd, 'node_modules/package-d/package.json'),
-        'b-index.js': path.resolve(cwd, 'node_modules/package-b/index.js'),
-        'b-package.json': path.resolve(cwd, 'node_modules/package-b/package.json'),
-        'c-a.json': path.resolve(cwd, 'node_modules/package-c/a.json'),
-        'c-package.json': path.resolve(cwd, 'node_modules/package-c/package.json'),
-        'e-entry.js': path.resolve(cwd, 'node_modules/package-e/entry.js'),
-        'e-a.js': path.resolve(cwd, 'node_modules/package-e/a.js'),
-        'e-package.json': path.resolve(cwd, 'node_modules/package-e/package.json'),
+        'app.js': path.resolve(cwdCjs, 'app.js'),
+        '.dot-file.js': path.resolve(cwdCjs, './.dot/file.js'),
+        '.dot-fileTwo.js': path.resolve(cwdCjs, './.dot/fileTwo.js'),
+        '.dot-sym.cjs': path.resolve(cwdCjs, './.dot/sym.cjs'), // file is a symlink but gets its own filename still
+        'a-main.js': path.resolve(cwdCjs, 'node_modules/package-a/main.js'),
+        '.dot.txt': path.resolve(cwdCjs, 'node_modules/package-a/.dot.txt'),
+        'a-pkg-ref.js': path.resolve(cwdCjs, 'node_modules/package-a/pkg-ref.js'),
+        'a-x.js': path.resolve(cwdCjs, 'node_modules/package-a/x.cjs'),
+        'not-strict.js': path.resolve(cwdCjs, 'node_modules/package-a/not-strict.js'),
+        'a-package.json': path.resolve(cwdCjs, 'node_modules/package-a/package.json'),
+        'd-lib-index.js': path.resolve(cwdCjs, 'node_modules/package-d/lib/index.js'),
+        'd-package.json': path.resolve(cwdCjs, 'node_modules/package-d/package.json'),
+        'b-index.js': path.resolve(cwdCjs, 'node_modules/package-b/index.js'),
+        'b-package.json': path.resolve(cwdCjs, 'node_modules/package-b/package.json'),
+        'c-a.json': path.resolve(cwdCjs, 'node_modules/package-c/a.json'),
+        'c-package.json': path.resolve(cwdCjs, 'node_modules/package-c/package.json'),
+        'e-entry.js': path.resolve(cwdCjs, 'node_modules/package-e/entry.js'),
+        'e-a.js': path.resolve(cwdCjs, 'node_modules/package-e/a.js'),
+        'e-package.json': path.resolve(cwdCjs, 'node_modules/package-e/package.json'),
       }
       unreferencedFiles = {
-        'e-variable-ref-b.js': path.resolve(cwd, 'node_modules/package-e/b.js'),
-        'a-no-ref-random-file.txt': path.resolve(cwd, 'node_modules/package-a/random-file.txt'),
-        'a-no-ref-random-file.json': path.resolve(cwd, 'node_modules/package-a/random-file.json'),
-        'd-no-ref-something.js': path.resolve(cwd, 'node_modules/package-d/lib/something.js'),
+        'e-variable-ref-b.js': path.resolve(cwdCjs, 'node_modules/package-e/b.js'),
+        'a-no-ref-random-file.txt': path.resolve(cwdCjs, 'node_modules/package-a/random-file.txt'),
+        'a-no-ref-random-file.json': path.resolve(
+          cwdCjs,
+          'node_modules/package-a/random-file.json'
+        ),
+        'd-no-ref-something.js': path.resolve(cwdCjs, 'node_modules/package-d/lib/something.js'),
       }
-      fixture.create(cwd)
-      result = resolveFilesSync('./app.js', { cwd })
+      fixtureCjs.create(cwdCjs)
+      fixtureEsm.create(path.resolve(__dirname, 'fixture-b'))
+
+      result = resolveFilesSync('./app.js', { cwd: cwdCjs })
       files = result.files
     })
 
     afterAll(() => {
-      fixture.remove(cwd)
+      fixtureCjs.remove(cwdCjs)
     })
 
     it('should resolve all files from an entry', async () => {
@@ -142,13 +167,13 @@ describe('resolve-dependencies', () => {
     })
 
     it('should resolve *all* package files when expand: all', () => {
-      result = resolveFilesSync('./app.js', { cwd, expand: 'all' })
+      result = resolveFilesSync('./app.js', { cwd: cwdCjs, expand: 'all' })
       const allFiles = Object.values({ ...unreferencedFiles, ...referencedFiles }).sort()
       expect(Object.keys(result.files).sort()).toEqual(allFiles)
     })
 
     it('should resolve all referenced files when expand: variable', () => {
-      result = resolveFilesSync('./app.js', { cwd, expand: 'variable' })
+      result = resolveFilesSync('./app.js', { cwd: cwdCjs, expand: 'variable' })
       files = result.files
       const {
         'a-no-ref-random-file.txt': _,
@@ -162,7 +187,7 @@ describe('resolve-dependencies', () => {
     })
 
     it('should handle symlinks', () => {
-      const symlinkedFile = files[referencedFiles['.dot-sym.js']]
+      const symlinkedFile = files[referencedFiles['.dot-sym.cjs']]
       const linkedFile = files[referencedFiles['.dot-fileTwo.js']]
       expect(symlinkedFile).not.toBeUndefined()
       expect(symlinkedFile).toHaveProperty('realPath', referencedFiles['.dot-fileTwo.js'])
@@ -179,7 +204,7 @@ describe('resolve-dependencies', () => {
 
     it('dot file entry', () => {
       const entry = './.dot/file.js'
-      result = resolveFilesSync(entry, { cwd, expand: 'all' })
+      result = resolveFilesSync(entry, { cwd: cwdCjs, expand: 'all' })
       expect(result.entries[entry]).not.toBeNull()
     })
   })

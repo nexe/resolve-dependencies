@@ -33,7 +33,7 @@ function walk(node: any, visit: (node: any) => void): void {
 
 export function gatherDependencies(
   code: string | null,
-  isModule?: boolean
+  isModule: boolean
 ): { variable: boolean; deps: { [key: string]: any } } {
   const result: { variable: boolean; deps: { [key: string]: any } } = {
     variable: false,
@@ -61,7 +61,7 @@ export function gatherDependencies(
     options = {
       globalReturn: true,
       next: true,
-      module: isModule || !isScript(code),
+      module: isModule,
       specDeviation: true,
     }
 

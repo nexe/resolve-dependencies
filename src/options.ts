@@ -5,18 +5,20 @@ type Expansion = 'all' | 'variable' | 'none'
 export type ResolveDepOptions = {
   entries: string[]
   cwd: string
+  type: 'module' | 'commonjs'
   expand: Expansion
   loadContent: boolean
   files: FileMap
 }
 
 export function normalizeOptions(args: Partial<ResolveDepOptions | string>[]): ResolveDepOptions {
-  const options = {
+  const options: ResolveDepOptions = {
     entries: [] as string[],
     cwd: process.cwd(),
     loadContent: true,
     expand: 'none' as Expansion,
     files: {} as FileMap,
+    type: 'commonjs',
   }
 
   args.forEach((x) => {
@@ -26,6 +28,7 @@ export function normalizeOptions(args: Partial<ResolveDepOptions | string>[]): R
     if ('expand' in x) options.expand = x.expand || 'none'
     if ('loadContent' in x) options.loadContent = Boolean(x.loadContent)
     if ('files' in x) Object.assign(options.files, x.files)
+    if ('type' in x) options.type = x.type || 'commonjs'
   })
 
   options.entries = Array.from(new Set(options.entries))

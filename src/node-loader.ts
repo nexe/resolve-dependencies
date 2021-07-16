@@ -10,76 +10,72 @@ import {
   JsLoaderOptions,
   nodeModuleGlobs,
   extraGlobs,
+  isScript,
 } from './file'
 import { ResolverFactory, CachedInputFileSystem } from 'enhanced-resolve'
 
 const { readFileSync, lstatSync, statSync, realpathSync } = fs
+const supportedJsExtensions = ['.js', '.cjs', '.mjs']
 
 interface Resolver {
   resolve: (context: any, path: string, request: string, resolveContext: any, callback: any) => void
 }
 
 const fileSystem = new CachedInputFileSystem(fs, 4000) as any,
-  resolver = ResolverFactory.createResolver({
-    extensions: ['.js', '.json', '.node'],
-    conditionNames: ['node', 'require'],
-    symlinks: false,
-    fileSystem: new CachedInputFileSystem(fs, 4000) as any,
-  }) as Resolver,
-  syncResolver = ResolverFactory.createResolver({
-    extensions: ['.js', '.json', '.node'],
-    conditionNames: ['node', 'require'],
+  esmResolver = ResolverFactory.createResolver({
+    extensions: [], //Do not resolve file extensions for esm
+    conditionNames: ['node', 'import', 'require', 'default'],
     useSyncFileSystemCalls: true,
     symlinks: false,
     fileSystem,
   }) as Resolver,
-  defaultOptions: Partial<JsLoaderOptions> = { loadContent: true, expand: 'none', isEntry: false }
+  cjsResolver = ResolverFactory.createResolver({
+    extensions: ['.js', '.cjs', '.mjs', '.json', '.node'],
+    conditionNames: ['node', 'require', 'default'],
+    useSyncFileSystemCalls: true,
+    symlinks: false,
+    fileSystem,
+  }) as Resolver,
+  defaultOptions: Partial<JsLoaderOptions> = {
+    loadContent: true,
+    expand: 'none',
+    isEntry: false,
+    type: 'commonjs',
+  }
 
 export type Resolved = { absPath: string; pkgPath: string; pkg: any; warning: string }
 
-function scc(path: string) {
+function stripControlCharacters(path: string) {
   return path && path.replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
 }
 
-export function resolveSync(from: string, request: string): Resolved {
-  const result = {
-    absPath: '',
-    pkgPath: '',
-    pkg: null,
-    warning: '',
-  }
-  syncResolver.resolve({}, from, request, {}, (err: Error | null, path: string, data: any) => {
-    if (err) {
-      result.warning = err.message
-      return
-    }
-    result.absPath = scc(path)
-    result.pkgPath = scc(data.descriptionFilePath)
-    result.pkg = data.descriptionFileData
-    return
-  })
-  return result
-}
+const emptyContext = {},
+  emptyResolveContext = {}
 
-export function resolve(from: string, request: string): Promise<Resolved> {
+export function resolveSync(from: string, request: string, resolver = cjsResolver): Resolved {
   const result = {
     absPath: '',
     pkgPath: '',
     pkg: null,
     warning: '',
   }
-  return new Promise((resolve) => {
-    resolver.resolve({}, from, request, {}, (err: Error | null, path: string, data: any) => {
+  resolver.resolve(
+    emptyContext,
+    from,
+    request,
+    emptyResolveContext,
+    (err: Error | null, path: string, data: any) => {
       if (err) {
         result.warning = err.message
-        return resolve(result)
+        return
       }
-      result.absPath = path
-      result.pkgPath = data.descriptionFilePath
+      result.absPath = stripControlCharacters(path)
+      result.pkgPath = stripControlCharacters(data.descriptionFilePath)
       result.pkg = data.descriptionFileData
-      resolve(result)
-    })
-  })
+      return
+    }
+  )
+  return result
 }
 
 async function expand(file: File, fileDir: string, baseDir: string, globs: string[] | string) {
@@ -109,13 +105,14 @@ export function load(
   request: string,
   options = defaultOptions
 ): File | { warning: string } {
-  const { absPath, pkg, pkgPath, warning } = resolveSync(workingDirectory, request)
+  const resolver = options.type === 'module' ? esmResolver : cjsResolver,
+    { absPath, pkg, pkgPath, warning } = resolveSync(workingDirectory, request, resolver)
   if (!absPath) {
     return { warning: warning }
   }
 
   const file = createFile(absPath),
-    isJs = absPath.endsWith('.js') || absPath.endsWith('.mjs') || options.isEntry
+    isJs = options.isEntry || supportedJsExtensions.some((x) => absPath.endsWith(x))
 
   file.absPath = absPath
 
@@ -125,8 +122,10 @@ export function load(
 
   if (isJs) {
     try {
-      const parseResult = gatherDependencies(file.contents, absPath.endsWith('.mjs'))
+      const isModule = absPath.endsWith('.mjs') || !isScript(file.contents as string)
+      const parseResult = gatherDependencies(file.contents, isModule)
       Object.assign(file.deps, parseResult.deps)
+      file.moduleType = isModule ? 'module' : 'commonjs'
       file.variableImports = parseResult.variable
     } catch (e) {
       return { warning: `Error parsing file: "${file.absPath}"\n${e.stack}` }

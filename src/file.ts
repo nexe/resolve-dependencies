@@ -1,6 +1,7 @@
 import { relative, sep } from 'path'
 
-const esmRegex = /(^\s*|[}\);\n]\s*)(import\s*(['"]|(\*\s+as\s+)?(?!type)([^"'\(\)\n; ]+)\s*from\s*['"]|\{)|export\s+\*\s+from\s+["']|export\s*(\{|default|function|class|var|const|let|async\s+function))/,
+const esmRegex =
+    /(^\s*|[}\);\n]\s*)(import\s*(['"]|(\*\s+as\s+)?(?!type)([^"'\(\)\n; ]+)\s*from\s*['"]|\{)|export\s+\*\s+from\s+["']|export\s*(\{|default|function|class|var|const|let|async\s+function))/,
   moduleGlob = ['**/*', '!node_modules', '!test', '!**/*.d.ts']
 
 export function isScript(code: string): boolean {
@@ -32,6 +33,7 @@ export function nodeModuleGlobs(
 export type JsLoaderOptions = {
   loadContent: boolean
   isEntry: boolean
+  type: 'module' | 'commonjs'
   context?: {
     moduleRoot: string
     package: any
@@ -50,6 +52,7 @@ export interface File {
   realPath?: string
   size: number
   absPath: string
+  moduleType: 'module' | 'commonjs'
   contents: string | null
   contextExpanded?: boolean
   variableImports?: boolean
@@ -76,6 +79,7 @@ export function createFile(absPath: string): File {
     size: 0,
     deps: {},
     absPath,
+    moduleType: 'commonjs',
     contents: null,
     variableImports: false,
   }
