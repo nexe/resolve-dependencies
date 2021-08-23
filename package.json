@@ -7,6 +7,10 @@
     "lib",
     "!**/*.spec.js"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nexe/resolve-dependencies.git"
+  },
   "scripts": {
     "build": "rm -rf lib && npm run lint && tsc",
     "commitlint": "commitlint -f $(git rev-list --tags --max-count=1) -t $(git log --pretty=%H | head -1)",
