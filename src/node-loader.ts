@@ -1,5 +1,5 @@
 import * as fs from 'fs'
-import { sync as glob } from 'globby'
+import { sync as glob } from 'fast-glob'
 import { join, dirname } from 'path'
 import { gatherDependencies } from './gather-deps'
 import {
@@ -80,6 +80,7 @@ export function resolveSync(from: string, request: string, resolver = cjsResolve
 
 async function expand(file: File, fileDir: string, baseDir: string, globs: string[] | string) {
   const files = glob(globs, {
+    onlyFiles: true,
     cwd: baseDir,
     followSymbolicLinks: false,
   })
@@ -127,7 +128,7 @@ export function load(
       Object.assign(file.deps, parseResult.deps)
       file.moduleType = isModule ? 'module' : 'commonjs'
       file.variableImports = parseResult.variable
-    } catch (e) {
+    } catch (e: any) {
       return { warning: `Error parsing file: "${file.absPath}"\n${e.stack}` }
     }
   }
