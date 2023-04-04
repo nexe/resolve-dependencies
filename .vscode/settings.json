@@ -1,5 +1,4 @@
 {
-  "files.autoSave": "onFocusChange",
   "eslint.workingDirectories": [
     {
       "mode": "auto"

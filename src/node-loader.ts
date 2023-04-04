@@ -43,7 +43,7 @@ const fileSystem = new CachedInputFileSystem(fs, 4000) as any,
     type: 'commonjs',
   }
 
-const modulesDir = 'node_modules'
+const ModulesDir = 'node_modules'
 
 export type Resolved = { absPath: string; pkgPath: string; pkg: any; warning: string }
 
@@ -144,12 +144,11 @@ export function load(
     const pkgDir = (file.moduleRoot = dirname(pkgPath)),
       expandAll = options.expand === 'all'
 
-    const pkgRootPrefix = pkgPath.split(modulesDir)[0]
-    const rootPkgDir = pkgPath
-      .split(modulesDir)[1]
-      .split(/\\|\//)
-      .filter((x) => x)[0]
-    const pkgRoot = join(pkgRootPrefix, modulesDir, rootPkgDir)
+    const pkgPathParts = pkgPath.split(ModulesDir)
+
+    const [_, ...pkgRootPrefix] = pkgPathParts.slice().reverse()
+    const rootPkgDir = pkgPathParts[pkgRootPrefix.length].split(/\\|\//).filter((x) => x)[0]
+    const pkgRoot = join(pkgRootPrefix.join(ModulesDir), ModulesDir, rootPkgDir)
 
     if (expandVariable || expandAll) {
       expand(file, fileDir, pkgDir, nodeModuleGlobs(file))

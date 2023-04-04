@@ -44,6 +44,14 @@ describe('resolve-dependencies', () => {
                   '.': { node: { import: './entry.js', require: './cjs/entry.js' } },
                 },
               }),
+              node_modules: dir({
+                'some-package': dir({
+                  'package.json': file({
+                    name: 'abc',
+                  }),
+                  'index.js': file('module.exports = "1234"'),
+                }),
+              }),
               cjs: dir({
                 'package.json': file({ type: 'commonjs' }),
                 'entry.js': file('const x = require("./test")'),
@@ -137,6 +145,10 @@ describe('resolve-dependencies', () => {
       unreferencedFiles = {
         'e-variable-ref-b.js': path.resolve(fixtureDir, 'node_modules/package-e/b.js'),
         'main-es.js': path.resolve(fixtureDir, 'node_modules/package-a/main-es.js'),
+        'some-package-json': path.resolve(
+          fixtureDir,
+          'node_modules/esm-package/node_modules/some-package/package.json'
+        ),
         'a-no-ref-random-file.txt': path.resolve(
           fixtureDir,
           'node_modules/package-a/random-file.txt'
@@ -195,7 +207,8 @@ describe('resolve-dependencies', () => {
         'a-no-ref-random-file.txt': _,
         'a-no-ref-random-file.json': __,
         'd-no-ref-something.js': ___,
-        'main-es.js': ____, //import is ignored
+        'main-es.js': ____,
+        'some-package-json': _____,
         ...notReferenced
       } = unreferencedFiles
       expect(Object.keys(files).sort()).toEqual(
@@ -231,7 +244,8 @@ describe('resolve-dependencies', () => {
 
       expect(result.entries['./esm-app.js'].deps['esm-package']).toBeTruthy()
       expect(result.files[referencedFiles['e-a.js']]).toBeTruthy()
-      //result.files should have the esm-package/package.json file
+      expect(result.files[unreferencedFiles['some-package-json']]).toBeFalsy()
+
       const esmPackageJson = path.resolve(fixtureDir, 'node_modules/esm-package/package.json')
       expect(result.files[esmPackageJson]).toMatchObject({ absPath: esmPackageJson })
     })
