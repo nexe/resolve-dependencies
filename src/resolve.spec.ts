@@ -9,38 +9,24 @@ const Tacks = require('tacks'),
   symlink = Tacks.Symlink
 
 describe('resolve-dependencies', () => {
-  let fixtureCjs: any
-  let fixtureEsm: any
+  let fixture: any
   let referencedFiles: { [key: string]: string }
   let unreferencedFiles: { [key: string]: string }
-  const cwdCjs = path.resolve(__dirname, 'fixture-a')
-  const cwdEsm = path.resolve(__dirname, 'fixture-b')
+  const fixtureDir = path.resolve(__dirname, 'fixture')
   let files: FileMap
   let result: { entries: FileMap; files: FileMap; warnings: string[] }
 
   describe('resolve - gathers all dependencies', () => {
     beforeAll(async () => {
-      fixtureEsm = new Tacks(
+      fixture = new Tacks(
         dir({
-          'package.json': file({
-            name: 'dual-mode-app-package',
-            type: 'module',
-            exports: {
-              node: { '.': { import: './entry.js', require: './cjs/entry.js' } },
-            },
-          }),
-          cjs: dir({
-            'package.json': file({ type: 'commonjs' }),
-            'entry.js': file('const x = require("./test")'),
-            'test.js': file('module.exports = "1234"'),
-          }),
-          'entry.js': file('import x from "./test.js"'),
-          'test.js': file('const x = "1234"; export default x'),
-        })
-      )
-
-      fixtureCjs = new Tacks(
-        dir({
+          'cjs-esm.js': file(`require('esm-package')`),
+          'esm-app.js': file(`
+            import * as esm from 'esm-package'
+            import * as a from 'package-a'
+            import * as b from 'package-b'
+            import * as d from 'package-d'
+            `),
           'app.js': file(
             `require('package-a'); require('package-b'); require('package-d'); require('./.dot/file')`
           ),
@@ -50,6 +36,22 @@ describe('resolve-dependencies', () => {
             'sym.cjs': symlink('./fileTwo.js'),
           }),
           node_modules: dir({
+            'esm-package': dir({
+              'package.json': file({
+                name: 'dual-mode-app-package',
+                type: 'module',
+                exports: {
+                  '.': { node: { import: './entry.js', require: './cjs/entry.js' } },
+                },
+              }),
+              cjs: dir({
+                'package.json': file({ type: 'commonjs' }),
+                'entry.js': file('const x = require("./test")'),
+                'test.js': file('module.exports = "1234"'),
+              }),
+              'entry.js': file('import x from "./test.js"'),
+              'test.js': file('const x = "1234"; export default x'),
+            }),
             'package-a': dir({
               'x.cjs': file('module.exports = "1234"'),
               'pkg-ref.js': file('require("./x")'),
@@ -68,7 +70,11 @@ describe('resolve-dependencies', () => {
                 version: '0.0.1',
                 name: 'package-a',
                 main: 'main.js',
+                exports: {
+                  '.': { import: './main-es.js', require: './main.js' },
+                },
               }),
+              'main-es.js': file(`void 0`),
               'main.js': file(`
                 require('path')
                 require('./not-strict')
@@ -101,51 +107,57 @@ describe('resolve-dependencies', () => {
             'package-e': dir({
               'b.js': file('console.log("wat")'),
               'a.js': file('var mod = "./b.js"; require(mod)'),
-              'entry.js': file('require("./a.js")'),
+              'entry.js': file('require("./a")'),
               'package.json': file({ name: 'package-e', exports: 'entry.js' }),
             }),
           }),
         })
       )
       referencedFiles = {
-        'app.js': path.resolve(cwdCjs, 'app.js'),
-        '.dot-file.js': path.resolve(cwdCjs, './.dot/file.js'),
-        '.dot-fileTwo.js': path.resolve(cwdCjs, './.dot/fileTwo.js'),
-        '.dot-sym.cjs': path.resolve(cwdCjs, './.dot/sym.cjs'), // file is a symlink but gets its own filename still
-        'a-main.js': path.resolve(cwdCjs, 'node_modules/package-a/main.js'),
-        '.dot.txt': path.resolve(cwdCjs, 'node_modules/package-a/.dot.txt'),
-        'a-pkg-ref.js': path.resolve(cwdCjs, 'node_modules/package-a/pkg-ref.js'),
-        'a-x.js': path.resolve(cwdCjs, 'node_modules/package-a/x.cjs'),
-        'not-strict.js': path.resolve(cwdCjs, 'node_modules/package-a/not-strict.js'),
-        'a-package.json': path.resolve(cwdCjs, 'node_modules/package-a/package.json'),
-        'd-lib-index.js': path.resolve(cwdCjs, 'node_modules/package-d/lib/index.js'),
-        'd-package.json': path.resolve(cwdCjs, 'node_modules/package-d/package.json'),
-        'b-index.js': path.resolve(cwdCjs, 'node_modules/package-b/index.js'),
-        'b-package.json': path.resolve(cwdCjs, 'node_modules/package-b/package.json'),
-        'c-a.json': path.resolve(cwdCjs, 'node_modules/package-c/a.json'),
-        'c-package.json': path.resolve(cwdCjs, 'node_modules/package-c/package.json'),
-        'e-entry.js': path.resolve(cwdCjs, 'node_modules/package-e/entry.js'),
-        'e-a.js': path.resolve(cwdCjs, 'node_modules/package-e/a.js'),
-        'e-package.json': path.resolve(cwdCjs, 'node_modules/package-e/package.json'),
+        'app.js': path.resolve(fixtureDir, 'app.js'),
+        '.dot-file.js': path.resolve(fixtureDir, './.dot/file.js'),
+        '.dot-fileTwo.js': path.resolve(fixtureDir, './.dot/fileTwo.js'),
+        '.dot-sym.cjs': path.resolve(fixtureDir, './.dot/sym.cjs'), // file is a symlink but gets its own filename still
+        'a-main.js': path.resolve(fixtureDir, 'node_modules/package-a/main.js'),
+        '.dot.txt': path.resolve(fixtureDir, 'node_modules/package-a/.dot.txt'),
+        'a-pkg-ref.js': path.resolve(fixtureDir, 'node_modules/package-a/pkg-ref.js'),
+        'a-x.js': path.resolve(fixtureDir, 'node_modules/package-a/x.cjs'),
+        'not-strict.js': path.resolve(fixtureDir, 'node_modules/package-a/not-strict.js'),
+        'a-package.json': path.resolve(fixtureDir, 'node_modules/package-a/package.json'),
+        'd-lib-index.js': path.resolve(fixtureDir, 'node_modules/package-d/lib/index.js'),
+        'd-package.json': path.resolve(fixtureDir, 'node_modules/package-d/package.json'),
+        'b-index.js': path.resolve(fixtureDir, 'node_modules/package-b/index.js'),
+        'b-package.json': path.resolve(fixtureDir, 'node_modules/package-b/package.json'),
+        'c-a.json': path.resolve(fixtureDir, 'node_modules/package-c/a.json'),
+        'c-package.json': path.resolve(fixtureDir, 'node_modules/package-c/package.json'),
+        'e-entry.js': path.resolve(fixtureDir, 'node_modules/package-e/entry.js'),
+        'e-a.js': path.resolve(fixtureDir, 'node_modules/package-e/a.js'),
+        'e-package.json': path.resolve(fixtureDir, 'node_modules/package-e/package.json'),
       }
       unreferencedFiles = {
-        'e-variable-ref-b.js': path.resolve(cwdCjs, 'node_modules/package-e/b.js'),
-        'a-no-ref-random-file.txt': path.resolve(cwdCjs, 'node_modules/package-a/random-file.txt'),
+        'e-variable-ref-b.js': path.resolve(fixtureDir, 'node_modules/package-e/b.js'),
+        'main-es.js': path.resolve(fixtureDir, 'node_modules/package-a/main-es.js'),
+        'a-no-ref-random-file.txt': path.resolve(
+          fixtureDir,
+          'node_modules/package-a/random-file.txt'
+        ),
         'a-no-ref-random-file.json': path.resolve(
-          cwdCjs,
+          fixtureDir,
           'node_modules/package-a/random-file.json'
         ),
-        'd-no-ref-something.js': path.resolve(cwdCjs, 'node_modules/package-d/lib/something.js'),
+        'd-no-ref-something.js': path.resolve(
+          fixtureDir,
+          'node_modules/package-d/lib/something.js'
+        ),
       }
-      fixtureCjs.create(cwdCjs)
-      fixtureEsm.create(path.resolve(__dirname, 'fixture-b'))
+      fixture.create(fixtureDir)
 
-      result = resolveFilesSync('./app.js', { cwd: cwdCjs })
+      result = resolveFilesSync('./app.js', { cwd: fixtureDir })
       files = result.files
     })
 
     afterAll(() => {
-      fixtureCjs.remove(cwdCjs)
+      fixture.remove(fixtureDir)
     })
 
     it('should resolve all files from an entry', async () => {
@@ -167,18 +179,23 @@ describe('resolve-dependencies', () => {
     })
 
     it('should resolve *all* package files when expand: all', () => {
-      result = resolveFilesSync('./app.js', { cwd: cwdCjs, expand: 'all' })
+      result = resolveFilesSync('./app.js', { cwd: fixtureDir, expand: 'all' })
       const allFiles = Object.values({ ...unreferencedFiles, ...referencedFiles }).sort()
       expect(Object.keys(result.files).sort()).toEqual(allFiles)
     })
 
     it('should resolve all referenced files when expand: variable', () => {
-      result = resolveFilesSync('./app.js', { cwd: cwdCjs, expand: 'variable' })
+      result = resolveFilesSync('./app.js', {
+        cwd: fixtureDir,
+        expand: 'variable',
+        type: 'commonjs',
+      })
       files = result.files
       const {
         'a-no-ref-random-file.txt': _,
         'a-no-ref-random-file.json': __,
         'd-no-ref-something.js': ___,
+        'main-es.js': ____, //import is ignored
         ...notReferenced
       } = unreferencedFiles
       expect(Object.keys(files).sort()).toEqual(
@@ -204,8 +221,33 @@ describe('resolve-dependencies', () => {
 
     it('dot file entry', () => {
       const entry = './.dot/file.js'
-      result = resolveFilesSync(entry, { cwd: cwdCjs, expand: 'all' })
+      result = resolveFilesSync(entry, { cwd: fixtureDir, expand: 'all' })
       expect(result.entries[entry]).not.toBeNull()
+    })
+
+    it('should resolve esm in module mode', () => {
+      const entry = './esm-app.js',
+        result = resolveFilesSync(entry, { cwd: fixtureDir, expand: 'none', type: 'module' })
+
+      expect(result.entries['./esm-app.js'].deps['esm-package']).toBeTruthy()
+      expect(result.files[referencedFiles['e-a.js']]).toBeTruthy()
+      //result.files should have the esm-package/package.json file
+      const esmPackageJson = path.resolve(fixtureDir, 'node_modules/esm-package/package.json')
+      expect(result.files[esmPackageJson]).toMatchObject({ absPath: esmPackageJson })
+    })
+
+    it('should resolve the root package.json of a dual mode package', () => {
+      const entry = './cjs-esm.js',
+        result = resolveFilesSync(entry, { cwd: fixtureDir, expand: 'none', type: 'commonjs' })
+      expect(result.entries['./cjs-esm.js'].deps['esm-package']).not.toBe(null)
+      const cjsPackageJson = path.resolve(fixtureDir, 'node_modules/esm-package/cjs/package.json')
+      const rootPackageJson = path.resolve(fixtureDir, 'node_modules/esm-package/package.json')
+      expect(result.files[cjsPackageJson]).toMatchObject({
+        absPath: cjsPackageJson,
+      })
+      expect(result.files[rootPackageJson]).toMatchObject({
+        absPath: rootPackageJson,
+      })
     })
   })
 })

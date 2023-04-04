@@ -23,7 +23,7 @@ interface Resolver {
 
 const fileSystem = new CachedInputFileSystem(fs, 4000) as any,
   esmResolver = ResolverFactory.createResolver({
-    extensions: [], //Do not resolve file extensions for esm
+    extensions: ['.js', '.cjs', '.mjs', '.json', '.node'],
     conditionNames: ['node', 'import', 'require', 'default'],
     useSyncFileSystemCalls: true,
     symlinks: false,
@@ -42,6 +42,8 @@ const fileSystem = new CachedInputFileSystem(fs, 4000) as any,
     isEntry: false,
     type: 'commonjs',
   }
+
+const modulesDir = 'node_modules'
 
 export type Resolved = { absPath: string; pkgPath: string; pkg: any; warning: string }
 
@@ -141,12 +143,20 @@ export function load(
     file.deps[ensureDottedRelative(fileDir, pkgPath)] = null
     const pkgDir = (file.moduleRoot = dirname(pkgPath)),
       expandAll = options.expand === 'all'
+
+    const pkgRootPrefix = pkgPath.split(modulesDir)[0]
+    const rootPkgDir = pkgPath
+      .split(modulesDir)[1]
+      .split(/\\|\//)
+      .filter((x) => x)[0]
+    const pkgRoot = join(pkgRootPrefix, modulesDir, rootPkgDir)
+
     if (expandVariable || expandAll) {
       expand(file, fileDir, pkgDir, nodeModuleGlobs(file))
       file.contextExpanded = true
     }
     if (extraGlobs(file).length) {
-      expand(file, fileDir, pkgDir, extraGlobs(file))
+      expand(file, fileDir, pkgRoot, extraGlobs(file))
     }
   } else if (expandVariable && options.context?.moduleRoot && !options.context.expanded) {
     expand(
