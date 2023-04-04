@@ -13,7 +13,7 @@ export function hasModuleGlobs(file: Pick<File, 'package' | 'belongsTo'>): boole
 }
 
 export function extraGlobs(file: Pick<File, 'package' | 'belongsTo'>): string[] {
-  const globs: string[] = []
+  const globs: string[] = ['**/package.json']
   return globs
     .concat(...[file.package?.pkg?.scripts || []])
     .concat(...[file.package?.pkg?.assets || []])
