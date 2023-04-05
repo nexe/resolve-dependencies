@@ -12,6 +12,7 @@ describe('resolve-dependencies', () => {
   let fixture: any
   let referencedFiles: { [key: string]: string }
   let unreferencedFiles: { [key: string]: string }
+  let nestedPkg: string
   const fixtureDir = path.resolve(__dirname, 'fixture')
   let files: FileMap
   let result: { entries: FileMap; files: FileMap; warnings: string[] }
@@ -145,10 +146,6 @@ describe('resolve-dependencies', () => {
       unreferencedFiles = {
         'e-variable-ref-b.js': path.resolve(fixtureDir, 'node_modules/package-e/b.js'),
         'main-es.js': path.resolve(fixtureDir, 'node_modules/package-a/main-es.js'),
-        'some-package-json': path.resolve(
-          fixtureDir,
-          'node_modules/esm-package/node_modules/some-package/package.json'
-        ),
         'a-no-ref-random-file.txt': path.resolve(
           fixtureDir,
           'node_modules/package-a/random-file.txt'
@@ -162,6 +159,10 @@ describe('resolve-dependencies', () => {
           'node_modules/package-d/lib/something.js'
         ),
       }
+      nestedPkg = path.resolve(
+        fixtureDir,
+        'node_modules/esm-package/node_modules/some-package/package.json'
+      )
       fixture.create(fixtureDir)
 
       result = resolveFilesSync('./app.js', { cwd: fixtureDir })
@@ -208,7 +209,6 @@ describe('resolve-dependencies', () => {
         'a-no-ref-random-file.json': __,
         'd-no-ref-something.js': ___,
         'main-es.js': ____,
-        'some-package-json': _____,
         ...notReferenced
       } = unreferencedFiles
       expect(Object.keys(files).sort()).toEqual(
@@ -244,7 +244,7 @@ describe('resolve-dependencies', () => {
 
       expect(result.entries['./esm-app.js'].deps['esm-package']).toBeTruthy()
       expect(result.files[referencedFiles['e-a.js']]).toBeTruthy()
-      expect(result.files[unreferencedFiles['some-package-json']]).toBeFalsy()
+      expect(result.files[nestedPkg]).toBeFalsy()
 
       const esmPackageJson = path.resolve(fixtureDir, 'node_modules/esm-package/package.json')
       expect(result.files[esmPackageJson]).toMatchObject({ absPath: esmPackageJson })
@@ -253,7 +253,7 @@ describe('resolve-dependencies', () => {
     it('should resolve the root package.json of a dual mode package', () => {
       const entry = './cjs-esm.js',
         result = resolveFilesSync(entry, { cwd: fixtureDir, expand: 'none', type: 'commonjs' })
-      expect(result.entries['./cjs-esm.js'].deps['esm-package']).not.toBe(null)
+      expect(result.entries['./cjs-esm.js'].deps['esm-package']).toBeTruthy()
       const cjsPackageJson = path.resolve(fixtureDir, 'node_modules/esm-package/cjs/package.json')
       const rootPackageJson = path.resolve(fixtureDir, 'node_modules/esm-package/package.json')
       expect(result.files[cjsPackageJson]).toMatchObject({

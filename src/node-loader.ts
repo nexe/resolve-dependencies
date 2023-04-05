@@ -154,9 +154,8 @@ export function load(
       expand(file, fileDir, pkgDir, nodeModuleGlobs(file))
       file.contextExpanded = true
     }
-    if (extraGlobs(file).length) {
-      expand(file, fileDir, pkgRoot, extraGlobs(file))
-    }
+
+    expand(file, fileDir, pkgRoot, extraGlobs(file))
   } else if (expandVariable && options.context?.moduleRoot && !options.context.expanded) {
     expand(
       file,
