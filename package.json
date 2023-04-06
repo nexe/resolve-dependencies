@@ -56,36 +56,6 @@
     "singleQuote": true,
     "printWidth": 100
   },
-  "commitlint": {
-    "extends": [
-      "@commitlint/config-angular"
-    ],
-    "rules": {
-      "header-max-length": [
-        2,
-        "always",
-        80
-      ],
-      "type-enum": [
-        2,
-        "always",
-        [
-          "build",
-          "ci",
-          "docs",
-          "feat",
-          "fix",
-          "perf",
-          "refactor",
-          "release",
-          "revert",
-          "style",
-          "test",
-          "chore"
-        ]
-      ]
-    }
-  },
   "eslintConfig": {
     "parser": "@typescript-eslint/parser",
     "plugins": [
